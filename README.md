@@ -2,6 +2,8 @@
 
 Welcome to the IntanLuthiLab repository.
 
+This repository belongs to the laboratory of Prof. Anita Lüthi, Department of Fundamental Neurosciences, Faculty of Biology and Medicine, University of Lausanne, Switzerland.
+
 We share openly here the softwares developed in our lab for recording and scoring electrophysiology data with the Intan recording system. Our hardware setup contains the following parts from IntanTech (https://intantech.com/):
 
 C3100 RHD USB interface board
@@ -21,7 +23,7 @@ Used to open, visualize and score the data in three main vigilent state (NREMS, 
 
 Romain Cardis 2021
 
-Citation:
+# Citation:
 
 *If you use these softwares and publish work using them, thank you for citing us in your methods.*
 
