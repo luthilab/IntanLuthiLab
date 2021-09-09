@@ -20,3 +20,19 @@ _VeryScore2_
 Used to open, visualize and score the data in three main vigilent state (NREMS, REMS, Wakefulness) obtained with Symply2Read.
 
 Romain Cardis 2021
+
+Citation:
+
+If you use these softwares and publish work using them, thank you for citing us in your methods.
+
+Our papers in which we used these tools:
+
+Thalamic reticular control of local sleep in mouse sensory cortex ()
+https://pubmed.ncbi.nlm.nih.gov/30583750/
+
+Cortico-autonomic local arousals and heightened somatosensory arousability during NREMS of mice in neuropathic pain (2021)
+https://pubmed.ncbi.nlm.nih.gov/34227936/
+
+Infraslow locus coeruleus activity coordinates spindle rhythms and heart rate to gate fluctuating non-REM sleep substates (2021)
+https://www.biorxiv.org/content/10.1101/2021.03.08.434399v1
+
