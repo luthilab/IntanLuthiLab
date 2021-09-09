@@ -27,7 +27,7 @@ If you use these softwares and publish work using them, thank you for citing us 
 
 Our papers in which we used these tools:
 
-Thalamic reticular control of local sleep in mouse sensory cortex ()
+Thalamic reticular control of local sleep in mouse sensory cortex (2018)
 https://pubmed.ncbi.nlm.nih.gov/30583750/
 
 Cortico-autonomic local arousals and heightened somatosensory arousability during NREMS of mice in neuropathic pain (2021)
