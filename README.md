@@ -23,7 +23,7 @@ Romain Cardis 2021
 
 Citation:
 
-If you use these softwares and publish work using them, thank you for citing us in your methods.
+*If you use these softwares and publish work using them, thank you for citing us in your methods.*
 
 Our papers in which we used these tools:
 
