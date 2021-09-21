@@ -44,7 +44,24 @@ Select both EEG and EMG > Tools > Auto-Scoring
 
 # Moving around and scoring
 
-You can
+Left: a
+right: d
+next transition to the left: left arrow
+next transition to the right: right arrow
+
+increase gain of all traces: up arrow (when none selected or of the selected traces only)
+decrease gain of all traces: down arrow (when none selected or of the selected traces only)
+
+NREM epoch: n
+WAKE epoch: w
+REM epoch: r
+
+NREM artifact: 2
+WAKE artifact: 1
+REM artifact: 3
+
+Microarousal: m
+Whatever purple epoch: f
 
 # Advanced functions
 
