@@ -89,7 +89,7 @@ Whatever purple epoch: **f**
 
 **Save:** Save your current scoring. The file will then receive a **b** in its name to show that is contains scoring data. If you load that file again, the saved scoring will appear.
 
-**Edit file Infos:** This allows you to add field to the Infos structure contained in the file. You can precise treatments, important time points, or whatever you would like to use for future analysis with this file. Like mentionned above, you can create the field **Channel** to add names to your traces.
+**Edit file Infos:** This allows you to add field to the Infos structure contained in the file. You can precise treatments, important time points, or whatever you would like to use for future analysis with this file. Like mentionned above, you can create the field **Channel** to add names to your traces. An idea is to put the name of the person that did the scoring.
 
 **Reduce file size:** We noticed that loading the whole file and saving it again all in one shot sometimes reduces the file size. If size is a problem for you, you can try this function once you have a file loaded.
 
