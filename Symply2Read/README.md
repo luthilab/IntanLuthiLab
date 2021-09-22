@@ -4,7 +4,7 @@ As it's name imply, this software is simply to read and records the data from th
 
 The utilisation of the software itself is straightforward. The only "complicated" part is the creation of new recording configuration and naming your file efficiently.
 
-## Creating new recording configuration
+## Creating new recording configurations
 
 This is done in the getConf.m file which acts as a memory for the configurations. There are already a few as examples.
 
