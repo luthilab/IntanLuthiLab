@@ -15,17 +15,21 @@ C3334 RHD 16-channel headstage
 
 The two softwares proposed here are:
 
-_Symply2Read_
+**Symply2Read**
 
 Used for recording up to 8 animals at a time for long periods.
 
-_VeryScore2_
+**VeryScore2**
 
 Used to open, visualize and score the data in three main vigilent state (NREMS, REMS, Wakefulness) obtained with Symply2Read.
 
-Romain Cardis 2021
+**Example of an analysis**
 
-# Citation:
+This is a little example of the architecture for an analysis on these **bt.mat** files. We provide as well some useful analysis and ease of life functions that we wrote and use in the lab. The analysis and the functions are normally documented and commented to understand their purpose.
+
+_Romain Cardis 2021_
+
+## Citation:
 
 *If you use these softwares and publish work using them, thank you for citing us in your methods.*
 
