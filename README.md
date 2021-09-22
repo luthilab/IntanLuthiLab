@@ -35,15 +35,15 @@ _Romain Cardis 2021_
 
 Our papers in which we used these tools:
 
-Thalamic reticular control of local sleep in mouse sensory cortex (2018)
+**Thalamic reticular control of local sleep in mouse sensory cortex (2018)**
 
 https://pubmed.ncbi.nlm.nih.gov/30583750/
 
-Cortico-autonomic local arousals and heightened somatosensory arousability during NREMS of mice in neuropathic pain (2021)
+**Cortico-autonomic local arousals and heightened somatosensory arousability during NREMS of mice in neuropathic pain (2021)**
 
 https://pubmed.ncbi.nlm.nih.gov/34227936/
 
-Infraslow locus coeruleus activity coordinates spindle rhythms and heart rate to gate fluctuating non-REM sleep substates (2021)
+**Infraslow locus coeruleus activity coordinates spindle rhythms and heart rate to gate fluctuating non-REM sleep substates (2021)**
 
 https://www.biorxiv.org/content/10.1101/2021.03.08.434399v1
 
