@@ -24,6 +24,7 @@ h.fileMenu_importrandom = uimenu(h.fileMenu, 'Text', 'Import randomly', 'Enable'
 h.fileMenu_save = uimenu(h.fileMenu, 'Text', 'Save', 'Enable', 'off');
 h.fileMenu_editInfo = uimenu(h.fileMenu, 'Text', 'Edit file Infos', 'Enable', 'off');
 h.fileMenu_reduce = uimenu(h.fileMenu, 'Text', 'Reduce file size', 'Enable', 'off');
+h.fileMenu_rename = uimenu(h.fileMenu, 'Text', 'Rename files to bt', 'Enable', 'on');
 
 %%  Tools menu
 h.toolsMenu = uimenu(h.mainFig, 'Text', 'Tools','enable','off');

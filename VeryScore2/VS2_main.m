@@ -42,7 +42,7 @@ h.fileMenu_save.Callback = @saveScoring;
 h.fileMenu_editInfo.Callback = @editInfos;
 h.fileMenu_importrandom.Callback = @importRand;
 h.fileMenu_reduce.Callback = @reduceFile;
-
+h.fileMenu_rename.Callback = @renameFileToBt;
 % Traces
 h.tracesMenu_bipol.Callback = @bipol;
 h.tracesMenu_filt.Callback = @filt;

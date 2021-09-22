@@ -1,10 +1,9 @@
-function renameFileToBt(varargin)
+function renameFileToBt
 %RENAMEFILETOBT to rename the S2R or other files like I want
 %
 % input name must be in the format obtained with our recording softs:
 % They MUST be like this. Otherwise it's unclear what would happen. If you
-% dont have name2, name3 or name4 they should be _anything_ so that the
-% separators exist. You should count 7 _ in the name of your files.
+% dont have name2, name3 or name4 they should be _anything_
 %
 % date_name1_name2_name3_name4_condition_AnimalN_n
 
