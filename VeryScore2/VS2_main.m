@@ -1,6 +1,6 @@
 function VS2_main
 % VS2_MAIN Version
-% Last version 1.2 addings.
+% Last version 1.5 addings.
 % - Microarousal epoch corresponding to keyboard key 'm'
 % - Treatment of last channel if it's too big (usually stimulation trace)
 % -d Correction of a bug that did not let you import another file while one
@@ -14,11 +14,13 @@ function VS2_main
 % - Retrocompatibility with the files containing old variable t
 % - Add a failsafe if the scoring is not saved and the windows is closed
 % (Najma will not loose scoring again)
-% From 1.5:
 % -Added a f epoch that can be use for whatever like drawziness or else.
 % The color is the wonderful purple because it's Najma's
-%
-% Romain Cardis 2018
+%- Fixed a bug that prevented to edit file Infos because of the new
+%configuration field containing the Intan configuration for the specific
+%animals.
+
+% Romain Cardis 2021
 
 %clear h
 %close all
@@ -133,16 +135,18 @@ h.mainFig.KeyPressFcn = @key;
                     nam = fieldnames(Infos);
                     df = struct2cell(Infos);
                     ifc = find(strcmp(nam,'Configuration'));
-                    if ~isempty(ifc)
-                        if iscell(df(ifc))
-                            df{ifc} = strjoin(cellfun(@num2str, df{ifc},'UniformOutput',false), ',');
-                        end
-                    end
+                    conf = df{ifc};
+                    nam(ifc) = [];
+                    df(ifc) = [];
                     n = cellfun(@ischar, df);
                     df(~n) = cellfun(@num2str, df(~n),'UniformOutput',false);
                     an = inputdlg(nam, 'Edit Infos', [1,40], df);
                     if ~isempty(an)
-                        h.file.Infos = cell2struct(an,nam);
+                         nInfos = cell2struct(an,nam);
+                         if ~isempty(ifc)
+                            nInfos.Configuration = conf;
+                         end
+                         h.file.Infos = nInfos;
                     end
                 else
                     errordlg('There is no Infos variable in the file!')
