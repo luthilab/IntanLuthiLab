@@ -149,10 +149,15 @@ The ```_t``` at the end means it contains traces. Once scored with VeryScore2, t
 ## Preparing your recording
 
 - Launch the soft and choose a destination directory by clicking on ```...```.
-- Give the main name of your files. The default way is explained above.
+- Give the main name of your files. The default naming way is explained above.
 - Click on ```Recording settings```
 - Choose the configuration from the dropdown menu
-- 
+- Choose a starting time (you can delay the start of the recording). You should keep the format style of the default date string. Our recordings start on the next day at 9am.
+- Choose the duration of **each** file (we usually record 12 hours per file, but this is as you prefer).
+- Choose the amount of files per animal. Here we usually record 4 files of 12 hours each per animal, effectively giving a total recording time of 48 hours.
+- You can validate or decide to start the recording immediately (regardless of the starting time precised).
+- Finally click on ```Start``` to launch the recording. Depending on the previous step, it will wait to start or start immediately.
+
 
 Thanks and good science to y'all!
 
