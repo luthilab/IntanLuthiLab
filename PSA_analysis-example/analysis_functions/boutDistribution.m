@@ -23,9 +23,9 @@ b(b=='1') = 'w';
 b(b=='2') = 'n';
 b(b=='3') = 'r';
 
-w_bouts = (regexp(b,'[^w]w+[^w]','end')+1) - (regexp(b,'[^w]w+[^w]','start')+1);
-n_bouts = (regexp(b,'[^n]n+[^n]','end')+1) - (regexp(b,'[^n]n+[^n]','start')+1);
-r_bouts = (regexp(b,'[^r]r+[^r]','end')+1) - (regexp(b,'[^r]r+[^r]','start')+1);
+w_bouts = (regexp(b,'[^w]w+[^w]','end')-1) - (regexp(b,'[^w]w+[^w]','start')+1);
+n_bouts = (regexp(b,'[^n]n+[^n]','end')-1) - (regexp(b,'[^n]n+[^n]','start')+1);
+r_bouts = (regexp(b,'[^r]r+[^r]','end')-1) - (regexp(b,'[^r]r+[^r]','start')+1);
 
 boutDist = struct();
 boutDist.nBouts = n_bouts*4;
