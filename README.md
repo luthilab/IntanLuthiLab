@@ -8,10 +8,10 @@ https://wwwfbm.unil.ch/dnf/group/gaining-insight-into-the-roles-of-sleep-for-neu
 
 We share openly here the softwares developed in our lab for recording and scoring electrophysiology data with the Intan recording system. Our hardware setup contains the following parts from IntanTech (https://intantech.com/):
 
-C3100 RHD USB interface board
-C3211 RHD 1-ft (0.3 m) ultra thin SPI interface cable
-C3314 RHD 32-channel headstage
-C3334 RHD 16-channel headstage
+- C3100 RHD USB interface board
+- C3211 RHD 1-ft (0.3 m) ultra thin SPI interface cable
+- C3314 RHD 32-channel headstage
+- C3334 RHD 16-channel headstage
 
 The two softwares proposed here are:
 
