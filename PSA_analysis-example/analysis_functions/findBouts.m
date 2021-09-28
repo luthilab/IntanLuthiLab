@@ -7,7 +7,7 @@ function [Bout] = findBouts(b, type, minSize)
 
 ex = sprintf('[^%s]%s{%i,}[^%s]', type, type, minSize, type);
 st = regexp(b, ex, 'start')+1;
-en = regexp(b, ex, 'end');
+en = regexp(b, ex, 'end')-1;
 
 Bout = [st; en];
 
