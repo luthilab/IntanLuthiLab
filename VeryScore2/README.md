@@ -11,6 +11,10 @@ Your raw traces now appear.
 
 **Important notice: All the display changes you will do on the traces, such as filters, gain changes or supressing traces are not saved in the file. The only thing saved is the b string containing your scoring. This means you should not be afraid to make display changes to ease your scoring.**
 
+**Second notice: In the lab we are using super nintendo USB controllers to score. Coupled with a small software such as JoyToKey, you can score much faster and more confortably (https://joytokey.net/en/). We provide a configuration for JoyToKey that is prepared for super nintendo controllers in the VeryScore2 folder.**
+
+
+
 ## Naming your traces
 It is advised at this step to give names to your traces, especially if you have more than 2. To do so, you need to go into:
 
@@ -78,6 +82,10 @@ REM artifact: **3**
 Microarousal: **m**
 
 Whatever purple epoch: **f**
+
+Moving the selected trace up and down in position: **shift+arrow**
+
+
 
 ## Advanced functions
 
