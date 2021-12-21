@@ -2,6 +2,7 @@ function [P] = powerSpectrum(b, trace, Fs, type)
 %EXACT_POWERSPECTRUM To calculate power spectral density across three
 %states and the mean value to normalize on, which is the mean of NREMS, REMS and wake together (same weight per state).
 % as in Vassali and Franken 2017
+% attention this is an example analysis that needs to be adapted to individual needs in terms of filters and calculation of means for normalization
 
 wtri = strfind(b, 'www')+1;
 ntri = strfind(b, 'nnn')+1;
