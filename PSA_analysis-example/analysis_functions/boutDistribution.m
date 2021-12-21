@@ -5,7 +5,7 @@ function boutDist = boutDistribution(b, MA_is_wake)
 %
 % Advice to plot: 
 % use the cdfplot function from matlab.
-%
+% AL update-Dec2021: This is an example file for which the proper use of the regexp function needs to be verified.
 % Romain Cardis 2021
 
 
