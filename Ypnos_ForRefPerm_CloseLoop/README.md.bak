@@ -58,6 +58,7 @@ conf.Pin10 = {24, 23, 21, 19, 17, 15, 13, 11, 9};
 ```
 The code is using the bipolarised EEG and EMG signals to detect the state of sleep so it is important to order your EEG and EMG signals as follows:
 ```
+    
 For example you have two EEGs and two EMGs you can put them as a vector in the configuration like this:
 
 ```
