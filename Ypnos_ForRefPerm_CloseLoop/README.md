@@ -71,7 +71,7 @@ Once you have done these steps, your configuration will appear in the droplist a
 
 ## Digital output depending on the sleep state
 
-If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs. You can decide on which sleep state in the funcition **Ypnos_Main.m** at the lines 
+If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs. You can decide on which sleep state in the funcition **Ypnos_Main.m** at the lines 151-168
 
 ```
 for c = 1:h.nChip
@@ -93,7 +93,16 @@ for c = 1:h.nChip
 	 end
 end
 ```
+## Analog inputs to the Intan board 
 
+In case you would like to add to your recordings analog inputs from the Intal card you can modify as you need the code in **Ypnos_Main.m** at the lines 239
+
+```
+toSave = [toAdd; analog(c,:)]; % add analog channel 1 for animal 1 etc...
+
+```
+
+This by default will save the analog 1 for the recording coming from the headstage 1 (c = 1) etc. The additional signal will be added at the end of the signals coming from the headstage and it is **not needed** to add it to your configuration (as opposed to SimplyRead).
 
 ## Naming your files
 You can essentially name your file whatever you want. The soft will use the name specified by the user at the first step before the recording and add the info of which animal it belongs to.
