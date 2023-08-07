@@ -15,7 +15,7 @@ The digital outputs of the Intan board used by Ypnos are fed to the RasPi inputs
 inREM = [5,13,19,26] 
 inNREM = [25,24,23,22]
 ```
-for each of the 4 animals we are usually recording simultaneously.
+for each of the 4 animals we are usually recording simultaneously and with each of the input corresponds to the detection of REM and NREM states dictated by Ypnos.
 
 depending on the calculation performed by those codes the outpouts of the RasPi defined in 
 
@@ -23,4 +23,5 @@ depending on the calculation performed by those codes the outpouts of the RasPi 
 out = [12,16,20,21]
 ```
 
-will be ON triggering the LEDs. In addition, a copy of those triggering signals are fed back to the Intan analog inputs. 
+will be ON triggering the LEDs. In addition, a copy of those triggering signals are fed back to the Intan analog inputs. Each of two files permit to trigger the LEDs for the inactivation of the  locus coeruleus after a REM episode longer than 120s, in the permissive or the refractory period as described in 
+https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1 and https://pubmed.ncbi.nlm.nih.gov/34432801/ .
