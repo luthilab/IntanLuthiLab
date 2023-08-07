@@ -102,6 +102,7 @@ classdef VS2_tracesPlot < handle
             
             function clickRealTrans(~,act)
                 if act.Button ~= 1;return;end
+
                 if self.bstate(self.position) ~= self.bstate(self.position-1)
                     [newLoc,~,button] = ginput(1);
                     if button ~= 1; return ;end

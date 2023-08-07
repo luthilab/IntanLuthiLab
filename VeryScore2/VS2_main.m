@@ -6,14 +6,15 @@ function VS2_main
 % -d Correction of a bug that did not let you import another file while one
 % was already loaded making it mandatory to quit VS2 between files.
 % - New Random import that will automatically ask and reload another file
-% randomly from the batch selected during the first import.
-% - Added a menu to directly access the reduce file size (useful for files
-% from INTAN recordings).
+% randomly from the baselected during the first import.
+% - Added a menu to directly access the reduce file size (useful for
+% files
+% from INTAN
+% recordings).
 % - Correction of a 3bug that did not correctly show the last epoch of the
 % scoring and the xlim of the main plot.
 % - Retrocompatibility with the files containing old variable t
 % - Add a failsafe if the scoring is not saved and the windows is closed
-% (Najma will not loose scoring again)
 % -Added a f epoch that can be use for whatever like drawziness or else.
 % The color is the wonderful purple because it's Najma's
 %- Fixed a bug that prevented to edit file Infos because of the new
@@ -26,7 +27,7 @@ function VS2_main
 %close all
 %clc
 
-%% create main figure and menus
+%create main figure and menus
 h = struct();
 h.updt = '1.5';
 h = VS2_display(h);
@@ -122,6 +123,12 @@ h.mainFig.KeyPressFcn = @key;
                 h.bigplot.ChannelNames = h.Channel;
                 h.bigplot.initiateNames()
             end
+        end
+        if ismember('traceName',varInfo)
+            chanames = h.file.traceName;
+            h.Channel = chanames;
+            h.bigplot.ChannelNames = h.Channel;
+            h.bigplot.initiateNames()
         end
     end
 
@@ -291,7 +298,11 @@ h.mainFig.KeyPressFcn = @key;
             end
             if isfield(Infos,'Channel')
                 chanames = Infos.Channel;
+                if iscell(chanames)
+                    chanames=chanames{1};
+                end
                 h.Channel = strsplit(chanames(~isspace(chanames)),',');
+                
             end
         else
             sr = questdlg('What is the sampling rate of the traces?', 'Please inform', '200 Hz', '1000 Hz', '200 hz');
