@@ -1,6 +1,6 @@
 # Ypnos for closed-loop detection of sleep states using EEG/EMG electrodes
 
-This software is simultaneously recording the data from the Intan setup and using the EEG and EMG data it detects three discrete sleep states (NREM,REM, Wake)
+This software is simultaneously recording the data from the Intan setup and using the EEG and EMG data it detects three discrete sleep states (NREM,REM, Wake).
 
 To make it work, you need to have the Matlab Intan toolbox installed correctly and accessible through the path.
 
@@ -58,20 +58,20 @@ conf.Pin10 = {24, 23, 21, 19, 17, 15, 13, 11, 9};
 ```
 The code is using the bipolarised EEG and EMG signals to detect the state of sleep so it is important to order your EEG and EMG signals as follows:
 
-For example you have two EEGs and two EMGs you can put them as a vector in the configuration like this:
+For example if you have two EEGs and two EMGs you can put them as a vector in the configuration like this:
 
 ```
 conf.AO_S1x2 = {[24, 15], [13, 11]};
 ```
 
-With this configuration Ypnos will use the two channels from the differentials of INTAN channels 23 to 14 and 12 to 10 to do the detection. However, you'll 
+With this configuration, Ypnos will use the two channels from the differentials of INTAN channels 23 to 14 and 12 to 10 to perform the detection. However, you'll 
 get the 4 channels idivudually in the recorded file.
 
 Once you have done these steps, your configuration will appear in the droplist at the moment of setting up your recording.
 
 ## Digital output depending on the sleep state
 
-If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs. You can decide on which sleep state in the funcition **Ypnos_Main.m** at the lines 151-168
+If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs (0-3.3V). You can decide on which sleep state in the function **Ypnos_Main.m** at the lines 151-168:
 
 ```
 for c = 1:h.nChip
@@ -95,7 +95,7 @@ end
 ```
 ## Analog inputs to the Intan board 
 
-In case you would like to add to your recordings analog inputs from the Intal card you can modify as you need the code in **Ypnos_Main.m** at the lines 239
+In case you would like to add to your recordings analog inputs from the Intal card you can modify as you need the code in **Ypnos_Main.m** at the line 239:
 
 ```
 toSave = [toAdd; analog(c,:)]; % add analog channel 1 for animal 1 etc...
