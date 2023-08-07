@@ -9,6 +9,8 @@ close all
 
 %%
 
+
+
 sampling_rate = rhd2000.SamplingRate.rate1000;
 h = struct();
 conf = Y2R_getConf;
@@ -220,6 +222,7 @@ h.datablock.read_next(h.board);
 for c = 1:h.nChip
 
     nA = fieldnames(h.conf);
+    % BE CAREFULL ABOUT THE DIVISION OF 1000
     toAdd = [h.datablock.Chips{h.chipIndex(c)}.Amplifiers(cell2mat(h.conf.(char(nA{c}))),:);...
         h.datablock.Board.ADCs(h.ana{c},:)./1000;...
         repelem((h.datablock.Chips{h.chipIndex(c)}.AuxInputs(h.xyz{c},:)-1.5)./1000,1,4)];
