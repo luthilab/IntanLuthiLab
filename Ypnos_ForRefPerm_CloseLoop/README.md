@@ -57,7 +57,7 @@ The final configuration is thus:
 conf.Pin10 = {24, 23, 21, 19, 17, 15, 13, 11, 9};
 ```
 The code is using the bipolarised EEG and EMG signals to detect the state of sleep so it is important to order your EEG and EMG signals as follows:
-```
+
 For example you have two EEGs and two EMGs you can put them as a vector in the configuration like this:
 
 ```
@@ -68,6 +68,32 @@ With this configuration Ypnos will use the two channels from the differentials o
 get the 4 channels idivudually in the recorded file.
 
 Once you have done these steps, your configuration will appear in the droplist at the moment of setting up your recording.
+
+## Digital output depending on the sleep state
+
+If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs. You can decide on which sleep state in the funcition **Ypnos_Main.m** at the lines 
+
+```
+for c = 1:h.nChip
+	st = checkState(h.panels{c});
+	stad = [st;tp];
+	h.matFiles{c,i}.states(1:4,ncheck) = stad;
+	% CHANGE THE STATE HERE TO HAVE TTL HIGH WHEN IT OCCURS. 1:wake, 2:NREMS, 3:REMS
+	%Channels for REM and NonREM detection mod by GF   
+	 switch st(1)
+		 case 1 % Flag for wake
+			h.board.DigitalOutputs(c+8) = 0;
+			h.board.DigitalOutputs(c+12) = 0;  
+		 case 3 % Flag for REM
+			h.board.DigitalOutputs(c+8) = 1;
+			h.board.DigitalOutputs(c+12) = 0;
+		 case 2 % Flag for NonREM
+			h.board.DigitalOutputs(c+8) = 0;
+			h.board.DigitalOutputs(c+12) = 1;      
+	 end
+end
+```
+
 
 ## Naming your files
 You can essentially name your file whatever you want. The soft will use the name specified by the user at the first step before the recording and add the info of which animal it belongs to.
