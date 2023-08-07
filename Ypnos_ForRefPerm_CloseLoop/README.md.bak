@@ -72,7 +72,7 @@ get the 4 channels idivudually in the recorded file.
 
 Once you have done these steps, your configuration will appear in the droplist at the moment of setting up your recording.
 
-The detection of the sleep states is based on different thresholds of delta to theta power ratios the user can set up in **Ypnos_Panel1000hz.m** lines 154-228.
+The detection of the sleep states is based on different thresholds of delta to theta power ratios (calculated online from the EEG signlas) and EMG activity, the user can set up in **Ypnos_Panel1000hz.m** lines 154-228.
 
 ## Digital output depending on the sleep state
 

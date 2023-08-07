@@ -25,7 +25,7 @@ Used to open, visualize and score the data in three main vigilent state (NREMS, 
 
 **Ypnos_ForRefPerm_CloseLoop**
 
-Used for recording data and automatic detection of the three vigilent states (NREMS, REMS, Wakefulness) using the EMG and EEG signals.
+Used for recording data and automatic detection of the three vigilent states (NREMS, REMS, Wakefulness) using the EMG and EEG signals. This version is related to the https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1 paper (Figure 3).
 
 **Example of an analysis**
 
