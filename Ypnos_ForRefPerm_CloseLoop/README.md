@@ -3,7 +3,7 @@
 This software is simultaneously recording the data from the Intan setup and using the EEG and EMG data it detects three discrete sleep states (NREM,REM, Wake).
 
 The present version of the code together with the functions in the RasPiFunctions folder is used to detect REM episodes (longer than 120s) and trigger leds for the inactivation of the locus ceruleus as described in the 
-https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1 Figure 3.
+https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1 (Figure 3).
 
 To make it work, you need to have the Matlab Intan toolbox installed correctly and accessible through the path.
 
@@ -71,6 +71,8 @@ With this configuration, Ypnos will use the two channels from the differentials 
 get the 4 channels idivudually in the recorded file.
 
 Once you have done these steps, your configuration will appear in the droplist at the moment of setting up your recording.
+
+The detection of the sleep states is based on different thresholds of delta to theta power ratios (calculated online from the EEG signlas) and EMG activity, the user can set up in **Ypnos_Panel1000hz.m** lines 154-228.
 
 ## Digital output depending on the sleep state
 
