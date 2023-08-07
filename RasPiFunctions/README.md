@@ -4,6 +4,8 @@ This software is used in combination with Ypnos software for triggering of leds 
 
 In the laboratory we are using RasPi of the type described here https://www.raspberrypi.com/products/raspberry-pi-4-model-b/.
 
+![RaspberryPi4_PB_02](https://github.com/luthilab/IntanLuthiLab/assets/120734447/e2489b12-05f6-49a4-9a7a-151e911ba261)
+
 
 ## Wiring up
 
