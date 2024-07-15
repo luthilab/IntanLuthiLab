@@ -1,10 +1,5 @@
 function Adonis_Main
-%Automatic Detection Of NREMS Infraslow State or ADONIS. Adonis was the
-%greek god of beauty, desire and vegetation. It matches the idea of this
-%software through the beauty of the analysis and usefulness of it, my
-%desire for it to work well and the vegetation associated to sleep.
-%Overall, what matches well is the imbred dumbness of some lines (coded by a biologist),
-%since adonis' mother was also his sister.
+%Automatic Detection Of NREMS Infraslow State or ADONIS.
 %
 %Adonis_MAIN is used with Intan system to detect NREMS and the specific
 %state of the infraslow "Fragility" or "continuity" and give TTL time-lock
