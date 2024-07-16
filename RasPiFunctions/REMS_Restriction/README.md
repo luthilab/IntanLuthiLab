@@ -1,11 +1,21 @@
-# RasPi functions for optogenetic led triggering
+# RasPi functions for REMS restriction 
 
-This software is used in combination with Ypnos software for triggering of leds for optogenetic experiments as the ones described in  https://doi.org/10.1101/2023.05.20.541586.
+This software is used in combination with Ypnos software for REMS restriction experiments described  https://doi.org/10.1101/2023.05.20.541586.
 
 In the laboratory we are using RasPi of the type described here https://www.raspberrypi.com/products/raspberry-pi-4-model-b/.
 
 ![RaspberryPi4_PB_02](https://github.com/luthilab/IntanLuthiLab/assets/120734447/e2489b12-05f6-49a4-9a7a-151e911ba261)
 
+In order to wake up the animal every time REMS is detected a vibrating motor is attached (using a double-sided tape) on the headstage of the animal. 
+
+<img width="659" alt="REMSD" src="https://github.com/user-attachments/assets/7b73a244-667c-4adf-a4ed-4377709f2fc1">
+
+
+The motors we are using in the laboratory is of this kind:
+
+https://www.amazon.com/BestTong-Vibration-Button-Type-Vibrating-Appliances/dp/B071WYG59X
+
+and they are directly triggered by the output (0 to 3.3V) of the RasPi. 
 
 ## Wiring up
 
