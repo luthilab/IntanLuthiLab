@@ -4,7 +4,7 @@ Welcome to the IntanLuthiLab repository.
 
 This repository belongs to the laboratory of Prof. Anita Lüthi, Department of Fundamental Neurosciences, Faculty of Biology and Medicine, University of Lausanne, Switzerland.
 
-https://wwwfbm.unil.ch/dnf/group/gaining-insight-into-the-roles-of-sleep-for-neuronal-function
+https://dnf-unil.ch/group/gaining-insight-into-the-roles-of-sleep-for-neuronal-function
 
 We share openly here the softwares developed in our lab for recording and scoring electrophysiology data with the Intan recording system. Our hardware setup contains the following parts from IntanTech (https://intantech.com/):
 
