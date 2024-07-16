@@ -15,11 +15,11 @@ We share openly here the softwares developed in our lab for recording and scorin
 
 The three softwares proposed here are:
 
-**Symply2Read**
+**Symply2Read_For_SleepData_Acquisition**
 
 Used for recording up to 8 animals at a time for long periods.
 
-**VeryScore2**
+**VeryScore2_For_Sleep_Scoring**
 
 Used to open, visualize and score the data in three main vigilent state (NREMS, REMS, Wakefulness) obtained with Symply2Read.
 
