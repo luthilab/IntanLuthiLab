@@ -29,5 +29,4 @@ depending on the calculation performed by those codes the outpouts of the RasPi 
 ```
 outs = (12,16,20,21)
 ```
-will be connected to the motors in order to start the vibration once REMS is detected.
- https://doi.org/10.1101/2023.05.20.541586 and https://pubmed.ncbi.nlm.nih.gov/34432801/ . For questions regarding the code computations please contact the members of the Prof. Anita Lüthi laboratory.
+will be connected to the motors in order to start the vibration once REMS is detected as described in  https://doi.org/10.1101/2023.05.20.541586. For questions regarding the code computations please contact the members of the Prof. Anita Lüthi laboratory.
