@@ -1,4 +1,4 @@
-# RasPi functions for led triggering
+# RasPi functions for optogenetic led triggering
 
 This software is used in combination with Ypnos software for triggering of leds for optogenetic experiments as the ones described in  https://doi.org/10.1101/2023.05.20.541586.
 
@@ -15,7 +15,7 @@ The digital outputs of the Intan board used by Ypnos are fed to the RasPi inputs
 inREM = [5,13,19,26] 
 inNREM = [25,24,23,22]
 ```
-for each of the 4 animals we are usually recording simultaneously and with each of the input corresponds to the detection of REM and NREM states dictated by Ypnos (see section for the Ypnos for closed loop experiments).
+for each of the 4 animals we are usually recording simultaneously and with each of the input corresponds to the detection of REM and NREM states dictated by Ypnos in a closed-loop manner (see section for the Ypnos for closed loop experiments).
 
 depending on the calculation performed by those codes the outpouts of the RasPi defined in: 
 
