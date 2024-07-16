@@ -23,9 +23,9 @@ Used for recording up to 8 animals at a time for long periods.
 
 Used to open, visualize and score the data in three main vigilent state (NREMS, REMS, Wakefulness) obtained with Symply2Read.
 
-**Ypnos_ForRefPerm_CloseLoop**
+**Ypnos_For_Closed_Loop_Experiments**
 
-Used for recording data and automatic detection of the three vigilent states (NREMS, REMS, Wakefulness) using the EMG and EEG signals. This version is related to the https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1 paper (Figure 3).
+Used for recording data and automatic detection of the three vigilent states (NREMS, REMS, Wakefulness) using the EMG and EEG signals. This version is related to the experiments conducted in the https://doi.org/10.1101/2023.05.20.541586 paper.
 
 **Example of an analysis**
 
@@ -51,9 +51,9 @@ https://pubmed.ncbi.nlm.nih.gov/34227936/
 
 https://pubmed.ncbi.nlm.nih.gov/34648731/
 
-**Locus coeruleus activity fluctuations set a non-reducible timeframe for mammalian NREM-REM sleep cycles (2023)**
+**Noradrenergic locus coeruleus activity functionally partitions NREM sleep to gatekeep the NREM-REM sleep cycle (2024)**
 
-https://www.biorxiv.org/content/10.1101/2023.05.20.541586v1
+https://doi.org/10.1101/2023.05.20.541586
 
 
 
