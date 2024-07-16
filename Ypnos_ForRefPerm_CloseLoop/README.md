@@ -76,7 +76,7 @@ The detection of the sleep states is based on different thresholds of delta to t
 
 ## Digital output depending on the sleep state
 
-If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the output of the Intan board digital outputs (0-3.3V). You can decide on which sleep state in the function **Ypnos_Main.m** at the lines 151-168:
+If it is needed one can use the closed-loop detection to trigger additional devices (such as a RasPi) by changing the digital output of the Intan board digital outputs (0-3.3V). You can decide on which sleep state to detect and which digital output to turn on in the function **Ypnos_Main.m** at the lines 151-168:
 
 ```
 for c = 1:h.nChip
