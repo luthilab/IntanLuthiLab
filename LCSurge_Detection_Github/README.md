@@ -8,9 +8,9 @@ The overal description is presented in the following figure (Supp. Figure 2 in h
 
 The detailed description of the algorithms are documented inside the f_ActivitySourges function which was also commented at each of the analysis blocks.
 
-The subfunctions p_GetTau, f_GetPeaks and f_GetPeakInfo, are included in the same script and contain their own README. 
+The subfunctions **p_GetTau**, **f_GetPeaks** and **f_GetPeakInfo**, are included in the same script and contain their own README. 
 
-The functions f_ElimMA, f_b2Vec, f_MGT and f_baselineCalculation are also included in the folder and are necessary for the script to work.
+The functions **f_ElimMA**, **f_b2Vec**, **f_MGT** and **f_baselineCalculation** are also included in the folder and are necessary for the script to work.
 
 
 
