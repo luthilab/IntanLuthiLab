@@ -12,5 +12,7 @@ The subfunctions **p_GetTau**, **f_GetPeaks** and **f_GetPeakInfo**, are include
 
 The functions **f_ElimMA**, **f_b2Vec**, **f_MGT** and **f_baselineCalculation** are also included in the folder and are necessary for the script to work.
 
+For questions regarding the code computations please contact the members of the Prof. Anita Lüthi laboratory.
+
 
 
