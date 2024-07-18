@@ -1,6 +1,6 @@
 # Detection of LC peaks and LC activity surges
 
-The functions f_ActivitySourges is a detailed summary of all the MATLAB-based algorithms used for the peak detection of LC activity during NREM sleep, the surges around microarousal (MA) and the description of the surges. It also includes the study of brain and body features around these surges. This analysis is used in https://doi.org/10.1101/2023.05.20.541586.
+The functions **f_ActivitySourges** is a detailed summary of all the MATLAB-based algorithms used for the peak detection of LC activity during NREM sleep, the surges around microarousal (MA) and the description of the surges. It also includes the study of brain and body features around these surges. This analysis is used in https://doi.org/10.1101/2023.05.20.541586.
 
 The overal description is presented in the following figure (Supp. Figure 2 in https://doi.org/10.1101/2023.05.20.541586).
 
