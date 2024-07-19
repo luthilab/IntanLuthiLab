@@ -1,3 +1,5 @@
+# This function checks the state of four TTL entries from the Intan/OpenEphys system (one per animal) and activates a process of 1 Hz-30 ms TTL signal to drive a LED for optogenetic stimulation. This function is only activated in the first 20 mins of each clock hour.
+
 import RPi.GPIO as GPIO
 import time
 import datetime
@@ -21,14 +23,14 @@ GPIO.setup((in1, in2, in3, in4), GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup((out1, out2, out3, out4), GPIO.OUT)
 
 
-## Stimulation
+## Stimulation process, this process produces a 1 Hz stimulation of 30 ms per pulse.
 def stimulation(out):
     time.sleep(1)
     while True:
         GPIO.output(out, GPIO.HIGH)
-        time.sleep(.01)
+        time.sleep(.03)
         GPIO.output(out, GPIO.LOW)
-        time.sleep(.99)
+        time.sleep(.7)
         
        
 ## Main block      
@@ -61,19 +63,21 @@ if __name__ == '__main__':
         CurrTime = datetime.datetime.now().strftime("%H:%M:%S");
         print("Minute:" , CurrTime[3:5]);
         
+        # Check the current clock time, if the time corresponds to the first 20 min of each hour, check the state of the input TTL for each animal and activate the corresponding output process (See stimulation process) if the input is high (Digital 1). Stop the stimulation process if the TTL input is low (Digital 0) for more than 3 seconds.
+                
         if int(CurrTime[3:5])>=00 and int(CurrTime[3:5])<=20:
             
             print('Stimulation period')
-            ## Animal1
+            ## Animal1stimulation
             if input1 == 1:
                 idxNR1=idxNR1+1;
                 idxOther1=0;
             else:
                 idxOther1 = idxOther1+1;
-                if idxOther1 >=2:
+                if idxOther1 >=3:
                     idxNR1=0;
                     
-            if idxNR1>=1 and inuse1 == 0:
+            if idxNR1>=10 and inuse1 == 0:
                 p1 = Process(target=stimulation, args=(out1,))
                 p1.start()
                 inuse1 = 1
@@ -90,10 +94,10 @@ if __name__ == '__main__':
                 idxOther2=0;
             else:
                 idxOther2 = idxOther2+1;
-                if idxOther2 >=2:
+                if idxOther2 >=3:
                     idxNR2=0;
                     
-            if idxNR2>=1 and inuse2 == 0:
+            if idxNR2>=10 and inuse2 == 0:
                 p2 = Process(target=stimulation, args=(out2,))
                 p2.start()
                 inuse2 = 1
@@ -110,10 +114,10 @@ if __name__ == '__main__':
                 idxOther3=0;
             else:
                 idxOther3 = idxOther3+1;
-                if idxOther3 >=2:
+                if idxOther3 >=3:
                     idxNR3=0;
                     
-            if idxNR3>=1 and inuse3 == 0:
+            if idxNR3>=10 and inuse3 == 0:
                 p3 = Process(target=stimulation, args=(out3,))
                 p3.start()
                 inuse3 = 1
@@ -130,10 +134,10 @@ if __name__ == '__main__':
                 idxOther4=0;
             else:
                 idxOther4 = idxOther4+1;
-                if idxOther4 >=2:
+                if idxOther4 >=3:
                     idxNR4=0;
                     
-            if idxNR4>=1 and inuse4 == 0:
+            if idxNR4>=10 and inuse4 == 0:
                 p4 = Process(target=stimulation, args=(out4,))
                 p4.start()
                 inuse4 = 1

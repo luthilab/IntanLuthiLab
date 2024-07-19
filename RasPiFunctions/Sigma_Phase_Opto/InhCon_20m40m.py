@@ -1,9 +1,12 @@
+# This function checks the state of four TTL entries from the Intan/OpenEphys system (one per animal) and produces a continuous TTL signal to drive LED for continous optogenetic inhibition. The function is only activated in the first 20 mins of each clock hour.
+
 import RPi.GPIO as GPIO
 import time
 import datetime
 from multiprocessing import Process
 from random import randint
 
+# Initialize input and output pins
 in1 = 5
 in2 = 6
 in3 = 13
@@ -20,7 +23,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup((in1, in2, in3, in4), GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup((out1, out2, out3, out4), GPIO.OUT)
  
-## Main block      
+
 inuse1 = 0
 inuse2 = 0
 inuse3 = 0
@@ -49,6 +52,9 @@ if __name__ == '__main__':
         
         CurrTime = datetime.datetime.now().strftime("%H:%M:%S");
         print("Minute:" , CurrTime[3:5]);
+        
+        
+        # Check the current clock time, if the time corresponds to the first 20 min of each hour, check the state of the input TTL for each animal and activate the corresponding output if the input is high (Digital 1). Stop the stimulation if the TTL input is low (Digital 0) for more than 4 seconds.
         
         if int(CurrTime[3:5])>=00 and int(CurrTime[3:5])<=20:
             
@@ -143,5 +149,3 @@ if __name__ == '__main__':
                 GPIO.output(out4,GPIO.LOW)
                 inuse4 = 0;
                 idxNR4 = 0;
-            
-        
