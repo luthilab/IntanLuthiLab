@@ -1,6 +1,6 @@
 # RasPi functions for REMS restriction 
 
-This software is used in combination with Ypnos software for REMS restriction experiments described  https://doi.org/10.1101/2023.05.20.541586.
+This software is used in combination with Ypnos software for REMS restriction experiments described  https://doi.org/10.1038/s41593-024-01822-0.
 
 In the laboratory we are using RasPi of the type described here https://www.raspberrypi.com/products/raspberry-pi-4-model-b/.
 
