@@ -51,7 +51,7 @@ https://pubmed.ncbi.nlm.nih.gov/34227936/
 
 https://pubmed.ncbi.nlm.nih.gov/34648731/
 
-**Infraslow noradrenergic locus coeruleus activity fluctuations are gatekeepers of the NREM-REM sleep cycle**
+**Infraslow noradrenergic locus coeruleus activity fluctuations are gatekeepers of the NREM-REM sleep cycle (2024)**
 
 https://doi.org/10.1038/s41593-024-01822-0
 
