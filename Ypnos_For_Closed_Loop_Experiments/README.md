@@ -3,7 +3,7 @@
 This software is simultaneously recording the data from the Intan setup and using the EEG and EMG data it detects three discrete sleep states (NREM,REM, Wake).
 
 The present version of the code together with the functions in the RasPiFunctions folder is used to detect REM episodes (longer than 120s) and trigger leds for the inactivation of the locus coeruleus as described in
-10.1038/s41593-024-01822-0.
+[10.1038/s41593-024-01822-0](https://doi.org/10.1038/s41593-024-01822-0).
 
 To make it work, you need to have the Matlab Intan toolbox installed correctly and accessible through the path.
 
