@@ -51,9 +51,9 @@ https://pubmed.ncbi.nlm.nih.gov/34227936/
 
 https://pubmed.ncbi.nlm.nih.gov/34648731/
 
-**Noradrenergic locus coeruleus activity functionally partitions NREM sleep to gatekeep the NREM-REM sleep cycle (2024)**
+**Infraslow noradrenergic locus coeruleus activity fluctuations are gatekeepers of the NREM-REM sleep cycle**
 
-https://doi.org/10.1101/2023.05.20.541586
+https://doi.org/10.1038/s41593-024-01822-0
 
 
 
