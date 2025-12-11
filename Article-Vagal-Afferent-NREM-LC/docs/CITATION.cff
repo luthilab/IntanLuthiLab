@@ -1,0 +1,28 @@
+
+cff-version: 1.2.0
+message: "If you use this code, please cite the following paper."
+title: "Vagal afferent activation induces a dissociated NREM sleep-like state with wake-related locus coeruleus activity"
+authors:
+  - family-names: "Cherrad"
+    given-names: "Najma"
+    affiliation: "Department of Fundamental Neurosciences, University of Lausanne, Rue du Bugnon 9, CH-1005 Lausanne, Switzerland"
+  - family-names: "Foustoukos"
+    given-names: "Georgios"
+    affiliation: "Department of Fundamental Neurosciences, University of Lausanne, Rue du Bugnon 9, CH-1005 Lausanne, Switzerland"
+  - family-names: "Fernandez"
+    given-names: "Laura MJ"
+    affiliation: "Department of Fundamental Neurosciences, University of Lausanne, Rue du Bugnon 9, CH-1005 Lausanne, Switzerland"
+  - family-names: "Osorio-Forero"
+    given-names: "Alejandro"
+    affiliation: "Department of Fundamental Neurosciences, University of Lausanne, Rue du Bugnon 9, CH-1005 Lausanne, Switzerland; Department of Sleep and Cognition, Netherlands Institute for Neuroscience, Meibergdreef 47, 1105 BA Amsterdam, The Netherlands"
+  - family-names: "Emmenegger"
+    given-names: "Yann"
+    affiliation: "Center for Integrative Genomics, University of Lausanne, Génopode, CH-1015 Lausanne, Switzerland"
+  - family-names: "Franken"
+    given-names: "Paul"
+    affiliation: "Center for Integrative Genomics, University of Lausanne, Génopode, CH-1015 Lausanne, Switzerland"
+  - family-names: "Lüthi"
+    given-names: "Anita"
+    affiliation: "Department of Fundamental Neurosciences, University of Lausanne, Rue du Bugnon 9, CH-1005 Lausanne, Switzerland"
+doi: "10.xxxx/placeholder-doi"   # Replace with actual DOI when available
+date-released: "2025-12-11"
