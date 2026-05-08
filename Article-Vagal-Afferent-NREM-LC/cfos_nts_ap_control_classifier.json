@@ -1,0 +1,52 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "GFP: Mean",
+    "pathClassBelow": {
+      "name": "Negative",
+      "color": [
+        153,
+        77,
+        0
+      ]
+    },
+    "pathClassEquals": {
+      "name": "Positive",
+      "color": [
+        255,
+        255,
+        255
+      ]
+    },
+    "pathClassAbove": {
+      "name": "Positive",
+      "color": [
+        255,
+        255,
+        255
+      ]
+    },
+    "threshold": 10.610578654420733
+  },
+  "pathClasses": [
+    {
+      "name": "Negative",
+      "color": [
+        153,
+        77,
+        0
+      ]
+    },
+    {
+      "name": "Positive",
+      "color": [
+        255,
+        255,
+        255
+      ]
+    }
+  ],
+  "filter": "DETECTIONS_ALL",
+  "timestamp": 1778240618277
+}
