@@ -49,7 +49,7 @@ Utemp = temp_raw*1000;
 Rtemp = Utemp / I;
 tempCelsius = zeros(1,length(Rtemp));
 for index = 1:length(Rtemp)
-    tempCelsius(index) = (((1 / beta) * log10(Rtemp(index) / R25) + (1/temp25))^-1) - 273.15 ;
+    tempCelsius(index) = (((1 / beta) * log(Rtemp(index) / R25) + (1/temp25))^-1) - 273.15 ;
 end
 
 tempCelsius = resample(tempCelsius,10,1000); %sample to 10Hz
