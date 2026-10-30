@@ -14,6 +14,7 @@ h.mainFig = figure('unit','normalized',...
     'color'             ,       h.white,...
     'numbertitle'       ,       'off',...
     'name'              ,       figTitle,...
+    'Tag'               ,       'VS3Main',...
     'Menubar'           ,       'none');
 
 
@@ -22,7 +23,9 @@ h.fileMenu = uimenu(h.mainFig, 'Text', 'File');
 h.fileMenu_import = uimenu(h.fileMenu, 'Text', 'Import');
 h.fileMenu_importrandom = uimenu(h.fileMenu, 'Text', 'Import randomly', 'Enable', 'on');
 h.fileMenu_convertOE = uimenu(h.fileMenu, 'Text', 'Convert Open Ephys recording...', 'Separator', 'on');
+h.fileMenu_sensorConvert = uimenu(h.fileMenu, 'Text', 'Sensor CSV files to one H5...');
 h.fileMenu_save = uimenu(h.fileMenu, 'Text', 'Save', 'Enable', 'off');
+h.fileMenu_export = uimenu(h.fileMenu, 'Text', 'Export displayed traces (.mat)...', 'Enable', 'off');
 h.fileMenu_editInfo = uimenu(h.fileMenu, 'Text', 'Edit file Infos', 'Enable', 'off');
 h.fileMenu_reduce = uimenu(h.fileMenu, 'Text', 'Reduce file size', 'Enable', 'off');
 h.fileMenu_rename = uimenu(h.fileMenu, 'Text', 'Rename files to bt', 'Enable', 'on');
@@ -47,6 +50,32 @@ h.toolsMenu_thermalEstimate = uimenu(h.toolsMenu_thermal, 'Text', 'Estimate offs
 h.toolsMenu_thermalOpenEphys = uimenu(h.toolsMenu_thermal, 'Text', 'EEG start time from Open Ephys recording...');
 h.toolsMenu_thermalCalib = uimenu(h.toolsMenu_thermal, 'Text', 'Add camera calibration (degC) to video...', 'Separator', 'on');
 h.toolsMenu_thermalPython = uimenu(h.toolsMenu_thermal, 'Text', 'Select python.exe...');
+
+%% Video submenu (Pi camera and thermal video in a column right of the traces, see VS3_videoPanel)
+h.toolsMenu_video = uimenu(h.toolsMenu, 'Text', 'Video');
+h.toolsMenu_videoPi = uimenu(h.toolsMenu_video, 'Text', 'Open Pi camera video...');
+h.toolsMenu_videoThermal = uimenu(h.toolsMenu_video, 'Text', 'Open thermal video (.ravi / .h5)...');
+h.toolsMenu_videoShow = uimenu(h.toolsMenu_video, 'Text', 'Show', 'Enable', 'off', 'Separator', 'on');
+h.toolsMenu_videoShowPi = uimenu(h.toolsMenu_videoShow, 'Text', 'Pi camera', 'UserData', 'pi');
+h.toolsMenu_videoShowThermal = uimenu(h.toolsMenu_videoShow, 'Text', 'Thermal', 'UserData', 'thermal');
+h.toolsMenu_videoShowBoth = uimenu(h.toolsMenu_videoShow, 'Text', 'Pi and thermal', 'UserData', 'both');
+h.toolsMenu_videoShowOverlap = uimenu(h.toolsMenu_videoShow, 'Text', 'Thermal over Pi', 'UserData', 'overlap');
+h.toolsMenu_videoAlign = uimenu(h.toolsMenu_video, 'Text', 'Align thermal on Pi camera...', 'Enable', 'off');
+h.toolsMenu_videoOffset = uimenu(h.toolsMenu_video, 'Text', 'Change video/EEG offsets...', 'Enable', 'off');
+h.toolsMenu_videoTiming = uimenu(h.toolsMenu_video, 'Text', 'Load recorder timing folder...', 'Enable', 'off');
+h.toolsMenu_videoTimingClear = uimenu(h.toolsMenu_video, 'Text', 'Clear recorder timing (use the offsets)', 'Enable', 'off');
+h.toolsMenu_videoRoiAdd = uimenu(h.toolsMenu_video, 'Text', 'Add ROI...', 'Enable', 'off', 'Separator', 'on');
+h.toolsMenu_videoRoiOn = uimenu(h.toolsMenu_video, 'Text', 'Measure ROIs at every epoch', 'Checked', 'on', 'Enable', 'off');
+h.toolsMenu_videoRoiNow = uimenu(h.toolsMenu_video, 'Text', 'Measure ROIs of this epoch', 'Enable', 'off');
+h.toolsMenu_videoRoiRemove = uimenu(h.toolsMenu_video, 'Text', 'Remove ROIs...', 'Enable', 'off');
+h.toolsMenu_videoClosePi = uimenu(h.toolsMenu_video, 'Text', 'Close Pi camera video', 'Enable', 'off', 'Separator', 'on');
+h.toolsMenu_videoCloseThermal = uimenu(h.toolsMenu_video, 'Text', 'Close thermal video', 'Enable', 'off');
+
+%% Sensor submenu (Pi sensor compared with the EEG / EMG in 4-s epochs, see VS3_sensorView)
+h.toolsMenu_sensor = uimenu(h.toolsMenu, 'Text', 'Sensor data');
+h.toolsMenu_sensorImport = uimenu(h.toolsMenu_sensor, 'Text', 'Import sensor H5...');
+h.toolsMenu_sensorShow = uimenu(h.toolsMenu_sensor, 'Text', 'Show sensor / EMG comparison', 'Enable', 'off');
+h.toolsMenu_sensorSettings = uimenu(h.toolsMenu_sensor, 'Text', 'Alignment and candidate bands...', 'Enable', 'off');
 
 %% Photometry submenu (dF/F of a recorded channel, see VS3_photometry)
 h.toolsMenu_photo = uimenu(h.toolsMenu, 'Text', 'Photometry');

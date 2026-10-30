@@ -1,4 +1,4 @@
-function VS3_main
+function VS3_main(file, varargin)
 % VS3_MAIN VeryScore3: score mouse sleep (wake / NREM / REM) in 4-s epochs.
 %
 % VeryScore3 is the continuation of VeryScore2 (Romain Cardis & Anita Luthi,
@@ -14,6 +14,16 @@ function VS3_main
 % - File > Convert Open Ephys recording (VS3_convertOpenEphys).
 % - Tools > Summary figure: hypnogram, EEG sigma, temperature, photometry (VS3_summary).
 % - The VeryScore3 logo: start screen, progress windows, Help > About (VS3_logo).
+% - File > Export displayed traces: the traces as displayed (filters, bipolar,
+% dF/F) in a new .mat file, in the units of the file, with Fs and start time.
+%
+% Version 3.1 (2026-10-30): the additions of Wenjie (October 2026) in the main window.
+% - Tools > Video: Pi camera and thermal video in a column right of the traces,
+% following the epoch, Play 4 s (space bar), thermal over Pi, ROI traces, recorder
+% timing maps (VS3_videoPanel, VS3_video, VS3_videoTiming), saved as 'Video'.
+% - Tools > Sensor data: Pi sensor compared with the EEG / EMG (VS3_sensorView).
+% - Open Ephys conversion: recordings and channels chosen in lists.
+% - VS3_main(file, 'pi', video, 'thermal', video) opens a file (and videos) directly.
 %
 % History of VeryScore2:
 % Version 1.5 addings.
@@ -65,23 +75,30 @@ function VS3_main
 
 %% create main figure and menus
 h = struct();
-h.updt = '3.0';
+h.updt = '3.1';
 h = VS3_display(h);
 h.thermal = [];   % temperature of the thermal video (struct 'Thermal'), see VS3_thermalTool
 h.Fs = [];        % sampling rate of the loaded file (Hz)
 h.photometry = []; % dF/F of a photometry channel (struct 'Photometry'), see VS3_photometry
+h.video = [];     % video column right of the traces (Pi camera, thermal video), see VS3_videoPanel
+h.sensor = [];    % sensor H5, offset, bands and channels compared (struct 'Sensor'), see VS3_sensorView
+h.sensorData = []; % the sensor H5 opened (VS3_sensorTool 'read')
+h.sensorView = []; % the comparison window
 
 %% set menu callbacks
 
 h.mainFig.CloseRequestFcn = @SureToClose;
+h.mainFig.DeleteFcn = @mainDeleted;
 h.issaved = 1;
 
 % File
 h.fileMenu_import.Callback = @importOne;
 h.fileMenu_save.Callback = @saveScoring;
+h.fileMenu_export.Callback = @exportTraces;
 h.fileMenu_editInfo.Callback = @editInfos;
 h.fileMenu_importrandom.Callback = @importRand;
 h.fileMenu_convertOE.Callback = @convertOpenEphys;
+h.fileMenu_sensorConvert.Callback = @sensorConvert;
 h.fileMenu_reduce.Callback = @reduceFile;
 h.fileMenu_rename.Callback = @renameFileToBt;
 % Traces
@@ -115,6 +132,25 @@ h.toolsMenu_thermalOpenEphys.Callback = @thermalOpenEphys;
 % Tools > Photometry
 h.toolsMenu_photoDFF.Callback = @photometryDFF;
 h.toolsMenu_photoFigure.Callback = @photometryFigure;
+% Tools > Video
+h.toolsMenu_videoPi.Callback = @(~,~) videoOpen('pi');
+h.toolsMenu_videoThermal.Callback = @(~,~) videoOpen('thermal');
+set([h.toolsMenu_videoShowPi, h.toolsMenu_videoShowThermal, h.toolsMenu_videoShowBoth, h.toolsMenu_videoShowOverlap], ...
+    'Callback', @videoShow);
+h.toolsMenu_videoAlign.Callback = @videoAlign;
+h.toolsMenu_videoOffset.Callback = @videoOffsets;
+h.toolsMenu_videoTiming.Callback = @videoTiming;
+h.toolsMenu_videoTimingClear.Callback = @videoTimingClear;
+h.toolsMenu_videoRoiAdd.Callback = @videoRoiAdd;
+h.toolsMenu_videoRoiOn.Callback = @videoRoiOn;
+h.toolsMenu_videoRoiNow.Callback = @videoRoiNow;
+h.toolsMenu_videoRoiRemove.Callback = @videoRoiRemove;
+h.toolsMenu_videoClosePi.Callback = @(~,~) videoClose('pi');
+% Tools > Sensor data
+h.toolsMenu_sensorImport.Callback = @sensorImport;
+h.toolsMenu_sensorShow.Callback = @sensorShow;
+h.toolsMenu_sensorSettings.Callback = @sensorSettings;
+h.toolsMenu_videoCloseThermal.Callback = @(~,~) videoClose('thermal');
 
 % Width
 h.widthMenu_8.Callback = @changeWidth;
@@ -130,17 +166,43 @@ h.widthMenu_384.Callback = @changeWidth;
 %% set keyboard function
 h.mainFig.KeyPressFcn = @key;
 
+%% a file given on the command line (scripts, tests):
+% VS3_main(file, 'pi', video, 'thermal', video, 'timing', recorderTimingFolder)
+if nargin > 0 && ~isempty(file)
+    h.rand = 0;
+    h.pendingFile = char(file);
+    import
+    for iArg = 1:2:numel(varargin) % (names not used in the nested functions, which share them)
+        if strcmpi(varargin{iArg}, 'timing'); continue; end
+        argVideo = videoLoad(varargin{iArg}, varargin{iArg+1});
+        if ~isempty(argVideo); videoAttach(varargin{iArg}, argVideo); end
+    end
+    iArg = find(strcmpi(varargin(1:2:end), 'timing'), 1);
+    if ~isempty(iArg); videoTimingLoad(varargin{2*iArg}, false); end
+end
+
 %% callback functions
 
     function SureToClose(~,~)
         if h.issaved == 0
             an = questdlg('It seems you did not save your scoring, you are risking loosing it all like Najma once! Are you sure to close?', 'CAREFUL!','Yes, my scoring is worthless.', 'No wait! I will save!', 'No wait! I will save!');
             if strcmp(an, 'Yes, my scoring is worthless.')
-                delete(h.mainFig)
+                closeMain()
             end
         else
-            delete(h.mainFig)
+            closeMain()
         end
+    end
+
+    function closeMain()
+        delete(h.mainFig) % see mainDeleted
+    end
+
+    function mainDeleted(~,~)
+        % the main window is deleted: the video column (its timer and video files) and the sensor
+        % comparison window go with it
+        if ~isempty(h.video) && isvalid(h.video); delete(h.video); end
+        sensorClose()
     end
 
     function reduceFile(~,~)
@@ -290,6 +352,7 @@ h.mainFig.KeyPressFcn = @key;
         shown = ~isempty(h.bigplot.thermax) && isgraphics(h.bigplot.thermax);
         h.bigplot.deleteAxes()
         h.bigplot = VS3_tracesPlot(h,posi,wi);
+        h.bigplot.epochChangedFunction = @sensorUpdate;
         h.bigplot.realTrans = rt;
         h.bigplot.updatePlot()
         if ~isempty(h.thermal) && shown
@@ -299,12 +362,24 @@ h.mainFig.KeyPressFcn = @key;
         if ~isempty(h.photometry)
             h.bigplot.showDFF(h.photometry.channelIndex, h.photometry)
         end
+        if ~isempty(h.video) && isvalid(h.video)
+            h.video.attach(h.bigplot) % the video column follows the new traces
+        end
     end
 
     function saveScoring(~,~)
         b = h.bigplot.giveMeB();
         h.file.b = b;
         h.file.bTrans = h.bigplot.realTrans;
+        if ~isempty(h.video) && isvalid(h.video)
+            h.file.Video = h.video.settings(); % the videos, offsets, view and ROIs, reopened at loading
+        elseif ismember('Video', who(h.file))
+            h.file.Video = videoNone();        % the videos were closed: not reopened any more
+        end
+        if ~isempty(h.sensor)
+            sensorCaptureConfig()
+            h.file.Sensor = h.sensor;          % the sensor H5 and the settings of the comparison
+        end
         h.issaved = 1;
         % a scored file is called <name>_bt.mat: <name>_t.mat -> <name>_bt.mat, <name>.mat -> <name>_bt.mat
         [~, base] = fileparts(h.filen);
@@ -331,8 +406,110 @@ h.mainFig.KeyPressFcn = @key;
         end
     end
     
+    function exportTraces(~,~)
+        % the traces as displayed (filters, notches, bipolar, dF/F; order and suppressed traces as on
+        % screen) in a new .mat file at 200 Hz, in the units of the file (dF/F in %), with their names,
+        % Fs and the start time, see VS3_tracesPlot.exportTraces. Opens in VeryScore3 like any file.
+        [X, names, rows] = h.bigplot.exportTraces();
+        if isempty(X)
+            errordlg('There is no trace to export.', 'Export traces'); return
+        end
+        [~, base] = fileparts(h.filen);
+        def = fullfile(h.path, [regexprep(base, '_b?t$', ''), '_processed.mat']);
+        if h.rand == 1; def = fullfile(h.path, 'processed.mat'); end % blind: no file name
+        [f, p] = uiputfile('*.mat', 'Export the displayed traces as', def);
+        if isequal(f, 0); return; end
+        target = fullfile(p, f);
+        if strcmpi(target, fullfile(h.file.Properties.Source))
+            errordlg('This is the file you are scoring: choose another name.', 'Export traces'); return
+        end
+        Src = struct();
+        if ismember('Infos', who(h.file)); Src = h.file.Infos; end
+        st = '';
+        if isfield(Src, 'StartTime') && ~isempty(Src.StartTime)
+            st = Src.StartTime;
+            if isdatetime(st); st = char(string(st, 'yyyy-MM-dd HH:mm:ss.SSS')); else; st = char(st); end
+        end
+
+        % names of the channels (an empty name leaves the trace out) and the start time
+        n = numel(names);
+        prompts = cell(1, n);
+        for i = 1:n
+            c = rows(i).channels;
+            what = sprintf('channel %d', c(1));
+            if numel(c) == 2; what = sprintf('channel %d - %d', c(1), c(2)); end
+            steps = regexprep(rows(i).steps, ' \(.*$', ''); % the short form, e.g. 'high-pass 0.75 Hz'
+            prompts{i} = sprintf('Trace %d (%s):', i, strjoin([{what}, steps], ', '));
+        end
+        prompts{1} = sprintf('Names of the channels in the exported file (empty = trace not saved).\n\n%s', prompts{1});
+        defs = names;
+        if h.rand == 0 % blind: the start time would give the date away, it is copied unseen
+            prompts{end+1} = 'Start time of the first sample (Infos.StartTime, e.g. 2026-10-08 09:30:00.000; empty if unknown):';
+            defs{end+1} = st;
+        end
+        an = inputdlg(prompts, 'Export displayed traces', [1 70], defs, 'on');
+        if isempty(an); return; end
+        keep = ~cellfun(@(s) isempty(strtrim(s)), an(1:n));
+        if ~any(keep)
+            errordlg('All the names are empty: nothing to export.', 'Export traces'); return
+        end
+        if h.rand == 0; st = strtrim(an{end}); end
+
+        % units: those of the traces of the file, % for the dF/F. Infos.Unit is the unit of the traces
+        % (VS3_convertOpenEphys; its ChannelUnits is the unit of BitVolts, not of the traces); an
+        % exported file has no Unit and the units of its traces in ChannelUnits
+        nOri = size(h.bigplot.oriTraces, 1);
+        unitOf = repmat({''}, 1, nOri);
+        if isfield(Src, 'Unit') && ischar(Src.Unit)
+            unitOf(:) = {Src.Unit};
+        elseif isfield(Src, 'ChannelUnits') && ischar(Src.ChannelUnits)
+            cu = strtrim(strsplit(Src.ChannelUnits, ','));
+            if numel(cu) == nOri; unitOf = cu; end
+        end
+        unit = cell(1, n);
+        traceProcessing = cell(1, n);
+        for i = 1:n
+            c = rows(i).channels;
+            src = sprintf('channel %d of the file', c(1));
+            if numel(c) == 2; src = sprintf('channel %d minus channel %d of the file', c(1), c(2)); end
+            if rows(i).dff
+                unit{i} = '%';
+            else
+                unit{i} = unitOf{c(1)};
+                src = sprintf('%s, decimated to 200 Hz', src);
+            end
+            traceProcessing{i} = strjoin([{src}, rows(i).steps], '; ');
+        end
+
+        traces = X(keep, :);
+        traceName = reshape(strtrim(an(keep)), 1, []);
+        traceProcessing = traceProcessing(keep);
+        Infos = struct();
+        Infos.Fs = 200;
+        Infos.StartTime = st;
+        Infos.Channel = strjoin(strrep(traceName, ',', ';'), ', '); % VeryScore reads the names from here
+        if any(~cellfun(@isempty, unit(keep))); Infos.ChannelUnits = strjoin(unit(keep), ', '); end
+        Infos.nSamples = size(X, 2);
+        Infos.Duration = size(X, 2)/200;
+        Infos.Source = h.file.Properties.Source;
+        Infos.Exported = sprintf(['VeryScore3 v%s, File > Export displayed traces, %s: the traces as displayed, display ', ...
+            'gain undone (see traceProcessing)'], h.updt, char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss')));
+        SourceInfos = Src; % the Infos of the scored file
+        w = VS3_logo('waitbar', 0.5, 'Saving the traces...', 'Name', 'Export traces');
+        try
+            save(target, 'traces', 'traceName', 'traceProcessing', 'Infos', 'SourceInfos', '-v7.3');
+        catch err
+            if isvalid(w); close(w); end
+            errordlg(sprintf('The traces could not be saved:\n%s', err.message), 'Export traces'); return
+        end
+        if isvalid(w); close(w); end
+        txt = sprintf('%d traces saved (%.1f h at 200 Hz) in\n%s', sum(keep), Infos.Duration/3600, target);
+        if isempty(st); txt = sprintf('%s\n\nNo start time: Infos.StartTime is empty.', txt); end
+        msgbox(txt, 'Export traces');
+    end
+
     function importRand(~,~)
-        [h.filebatch, pathf] = uigetfile('*.mat','Select multiple files and i''ll choose one','multiselect','on');       
+        [h.filebatch, pathf] = uigetfile('*.mat','Select multiple files and i''ll choose one', VS3_fileHistory('get', 'eegMat', pwd), 'multiselect','on');       
         if iscell(h.filebatch)
             h.randOrder = randperm(length(h.filebatch)); % random order (no Statistics toolbox needed)
             h.curRandFile = 1;
@@ -384,8 +561,9 @@ h.mainFig.KeyPressFcn = @key;
                 pathf = [pathf, filesep];
                 h.pendingFile = '';
             else
-                [filen, pathf] = uigetfile('*.mat','Select your file to score');
+                [filen, pathf] = uigetfile('*.mat','Select your file to score', VS3_fileHistory('get', 'eegMat', pwd));
                 if filen == 0; return; end
+                VS3_fileHistory('remember', 'eegMat', fullfile(pathf, filen));
             end
             h.filen = filen;
             h.path = pathf;
@@ -399,8 +577,10 @@ h.mainFig.KeyPressFcn = @key;
             traces = [t(1:end/2);t(end/2+1:end)];
         end
         
+        h.traScale = ones(size(traces,1),1); % what each channel is divided by for the display (undone by the export)
         if max(traces(end,:)) > 3
             traces(end,:) = traces(end,:)/4000; % if it's a stimulation trace
+            h.traScale(end) = 4000;
         end
         if h.rand == 0
             h.mainFig.Name = ['VeryScore3 v', h.updt,' - Scoring file: ',h.filen];
@@ -433,7 +613,12 @@ h.mainFig.KeyPressFcn = @key;
                     chanames=chanames{1};
                 end
                 h.Channel = strsplit(chanames(~isspace(chanames)),',');
-                
+                if numel(h.Channel) ~= size(traces,1) && ismember('traceName', varInfo)
+                    % Infos.Channel of the whole recording but only some channels converted: the
+                    % names of the channels in the file
+                    tn = cellstr(h.file.traceName);
+                    if numel(tn) == size(traces,1); h.Channel = tn(:)'; end
+                end
             end
         else
             sr = questdlg('What is the sampling rate of the traces?', 'Please inform', '200 Hz', '1000 Hz', '200 hz');
@@ -443,6 +628,9 @@ h.mainFig.KeyPressFcn = @key;
             h.file.Infos = Infos;
         end
         h.Fs = sr;
+        % Open Ephys acquisition board (File > Convert Open Ephys recording): each channel has its own
+        % DC level, the traces are centred in their slot on screen (display only)
+        h.centerTraces = isfield(Infos, 'Stream') && strcmpi(char(Infos.Stream), 'acquisition_board');
         deciFactor = sr/200;
         [si,~] = size(traces); 
         h.tra = [];
@@ -450,7 +638,8 @@ h.mainFig.KeyPressFcn = @key;
             waitbar(i/si,w)
             ntra = decimate(traces(i,:),deciFactor,'fir');
             if max(ntra > 0.08) % it's likely a stimulation trace 0-3.3 V
-                ntra = ntra/1000;  
+                ntra = ntra/1000;
+                h.traScale(i) = h.traScale(i)*1000;
             end
             h.tra = [h.tra; ntra]; % set gain here in case you lost
         end
@@ -465,12 +654,17 @@ h.mainFig.KeyPressFcn = @key;
         if isfield(h,'bigplot')
             h.bigplot.deleteAxes()
         end
+        if ~isempty(h.video) && isvalid(h.video) % the videos of the previous file
+            delete(h.video)
+        end
+        h.video = [];
         if isfield(h, 'splash') % the start screen
             delete(h.splash(isgraphics(h.splash)));
             h.splash = [];
         end
         
         h.bigplot = VS3_tracesPlot(h,1,10);
+        h.bigplot.epochChangedFunction = @sensorUpdate; % the sensor comparison follows the epoch
         
         if ismember('bTrans', varInfo)
             h.bigplot.realTrans = h.file.bTrans;
@@ -510,9 +704,41 @@ h.mainFig.KeyPressFcn = @key;
             end
         end
         photometryMenus()
-        
+
+        % Videos of this file (Tools > Video), reopened when their files are still there
+        if ismember('Video', varInfo)
+            try
+                videoRestore(h.file.Video)
+            catch err
+                warning('VS3:video', 'The videos stored in the file could not be reopened: %s', err.message)
+            end
+        end
+        videoMenus()
+
+        % Sensor H5 compared with the EEG / EMG (Tools > Sensor data): only its file and settings are
+        % in the scoring file; a moved H5 is also looked for next to the scored file
+        sensorClose()
+        h.sensor = [];
+        h.sensorData = [];
+        if ismember('Sensor', varInfo)
+            try
+                h.sensor = h.file.Sensor;
+                if ~isfile(h.sensor.source)
+                    [~, n, e] = fileparts(h.sensor.source);
+                    h.sensor.source = fullfile(h.path, [n, e]);
+                end
+                h.sensorData = VS3_sensorTool('read', h.sensor.source);
+            catch err
+                h.sensor = [];
+                h.sensorData = [];
+                warning('VS3:sensor', 'The sensor H5 of this file is not available (import it again): %s', err.message)
+            end
+        end
+        sensorMenus()
+
         % Activate Menus
         h.fileMenu_save.Enable = 'on';
+        h.fileMenu_export.Enable = 'on';
         h.toolsMenu.Enable = 'on';
         h.tracesMenu.Enable = 'on';
         h.widthMenu.Enable = 'on';
@@ -699,6 +925,515 @@ h.mainFig.KeyPressFcn = @key;
         else
             errordlg(sprintf('This Python cannot import numpy and h5py:\n%s\n\nInstall them with:  pip install numpy h5py', info), 'Thermal video')
         end
+    end
+
+%% Video functions (Pi camera and thermal video in a column right of the traces), see VS3_videoPanel
+    function videoMenus()
+        % enable / check the video menu items according to the videos that are open
+        onoff = {'off', 'on'};
+        has = ~isempty(h.video) && isvalid(h.video);
+        hasPi = has && ~isempty(h.video.pi);
+        hasTh = has && ~isempty(h.video.thermal);
+        h.toolsMenu_videoShow.Enable = onoff{(hasPi && hasTh)+1};
+        h.toolsMenu_videoAlign.Enable = onoff{(hasPi && hasTh)+1};
+        set([h.toolsMenu_videoOffset, h.toolsMenu_videoTiming, h.toolsMenu_videoRoiAdd], 'Enable', onoff{(hasPi || hasTh)+1})
+        timed = (hasPi && ~isempty(h.video.pi.timeMap)) || (hasTh && ~isempty(h.video.thermal.timeMap));
+        h.toolsMenu_videoTimingClear.Enable = onoff{timed+1};
+        hasRoi = has && ~isempty(h.video.rois);
+        set([h.toolsMenu_videoRoiOn, h.toolsMenu_videoRoiNow, h.toolsMenu_videoRoiRemove], 'Enable', onoff{hasRoi+1})
+        h.toolsMenu_videoRoiOn.Checked = onoff{(~has || h.video.roiOn)+1};
+        h.toolsMenu_videoClosePi.Enable = onoff{hasPi+1};
+        h.toolsMenu_videoCloseThermal.Enable = onoff{hasTh+1};
+        m = '';
+        if has; m = h.video.shownMode(); end
+        for it = h.toolsMenu_videoShow.Children(:)'
+            it.Checked = onoff{strcmp(it.UserData, m)+1};
+        end
+    end
+
+    function videoOpen(kind)
+        % select the video of the Pi camera or of the thermal camera and show it next to the traces
+        if strcmp(kind, 'pi')
+            filt = {'*.mp4;*.avi;*.mkv;*.mov', 'Pi camera video (with its .timestamps.csv)'};
+            ttl = 'Select the video of the Pi camera (its .timestamps.csv next to it)';
+        else
+            filt = {'*.ravi;*.h5', 'Thermal video (.ravi, or .h5 made by the thermal tool)'};
+            ttl = 'Select the thermal video (.ravi, or the .h5 made by Tools > Thermal video)';
+        end
+        startDir = VS3_fileHistory('get', [kind, 'Video'], h.path);
+        if strcmp(kind, 'thermal') && ~isempty(h.thermal) && isfield(h.thermal, 'source') && isfile(h.thermal.source)
+            startDir = h.thermal.source; % the video of the temperature analysis
+        end
+        if isfolder(startDir); startDir = fullfile(startDir, filesep); end
+        [f, p] = uigetfile(filt, ttl, startDir);
+        if isequal(f, 0); return; end
+        V = videoLoad(kind, fullfile(p, f));
+        if isempty(V); return; end
+        VS3_fileHistory('remember', [kind, 'Video'], fullfile(p, f));
+        videoAttach(kind, V)
+        h.video.update()
+        if h.rand == 1
+            msgbox(sprintf('Video opened: %d frames, offset %.3f s (%s).', V.nFrames, V.offset, V.offsetSource), 'Video')
+        else
+            msgbox(sprintf('%s\n\nOffset: %.3f s (%s). Tools > Video > Change video/EEG offsets to correct it.', ...
+                V.describe(), V.offset, V.offsetSource), 'Video')
+        end
+    end
+
+    function V = videoLoad(kind, file, offset, src)
+        % open the video file; offset and its source given (saved settings) or from the start times
+        V = [];
+        w = VS3_logo('waitbar', 0.3, 'Opening the video...', 'Name', 'Video');
+        try
+            V = VS3_video(file);
+        catch err
+            if isvalid(w); close(w); end
+            errordlg(sprintf('The video could not be opened:\n%s', err.message), 'Video')
+            return
+        end
+        if isvalid(w); close(w); end
+        if ~strcmp(V.kind, kind)
+            names = struct('pi', 'a Pi camera video', 'thermal', 'a thermal video (.ravi / .h5)');
+            errordlg(sprintf('This is not %s.', names.(kind)), 'Video')
+            delete(V); V = [];
+            return
+        end
+        if nargin > 2
+            V.offset = offset;
+            V.offsetSource = src;
+        else
+            [V.offset, V.offsetSource] = videoDefaultOffset(V);
+        end
+    end
+
+    function videoAttach(kind, V)
+        % put video V in the column (created with the first video)
+        if isempty(h.video) || ~isvalid(h.video)
+            h.video = VS3_videoPanel(h.mainFig);
+            h.video.keyFunction = @key;
+            h.video.blind = h.rand == 1;
+            h.video.attach(h.bigplot)
+        end
+        h.video.setVideo(kind, V)
+        videoMenus()
+    end
+
+    function videoClose(kind)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        h.video.setVideo(kind, [])
+        if ~h.video.isOpen() % no video left: the column disappears
+            delete(h.video)
+            h.video = [];
+            h.bigplot.video = [];
+            h.bigplot.layoutAxes()
+        end
+        videoMenus()
+    end
+
+    function S = videoNone()
+        % settings of the column without any video (Save after the videos were closed)
+        S = struct('piFile', '', 'thermalFile', '', 'mode', 'both', 'overlay', [], 'alpha', 0.6, ...
+            'rois', struct('video', {}, 'rect', {}, 'name', {}), 'roiOn', true, 'timingFolder', '');
+    end
+
+    function videoRestore(S)
+        % the videos saved with this file (File > Save), when their files are still there; a video
+        % that was moved is also looked for in the folder of the scored file
+        for kind = {'pi', 'thermal'}
+            k = kind{1};
+            if ~isfield(S, [k, 'File']) || isempty(S.([k, 'File'])); continue; end
+            f = S.([k, 'File']);
+            if ~isfile(f)
+                [~, n, e] = fileparts(f);
+                f = fullfile(h.path, [n, e]);
+                if ~isfile(f)
+                    warning('VS3:video', 'The %s video of this file is not found any more: %s', k, S.([k, 'File']))
+                    continue
+                end
+            end
+            V = videoLoad(k, f, S.([k, 'Offset']), S.([k, 'OffsetSource']));
+            if ~isempty(V); videoAttach(k, V); end
+        end
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        h.video.apply(S)
+        if isfield(S, 'timingFolder') && ~isempty(S.timingFolder) && isfolder(S.timingFolder)
+            videoTimingLoad(S.timingFolder, false)
+        end
+    end
+
+    function [off, src] = videoDefaultOffset(V)
+        % video time at EEG sample 1, as for the thermal tool: the offset of the temperature analysis
+        % when it was made on this thermal video, else from the start times of the two recordings
+        % (Pi: clock time of its first frame in the timestamps file, UTC; thermal: start time of the
+        % camera, clock of the PC). Not used when the EEG would fall outside the video, nor for the
+        % thermal camera when the PC clocks are more than 12 h apart (as the thermal tool)
+        off = 0;
+        src = 'no start time, 0 used';
+        if strcmp(V.kind, 'thermal') && ~isempty(h.thermal) && isfield(h.thermal, 'offset')
+            [~, a] = fileparts(V.file);
+            names = {};
+            if isfield(h.thermal, 'source'); [~, names{end+1}] = fileparts(h.thermal.source); end
+            if isfield(h.thermal, 'videoFile'); [~, names{end+1}] = fileparts(h.thermal.videoFile); end
+            if any(strcmpi(a, names))
+                off = h.thermal.offset;
+                src = 'offset of the temperature analysis';
+                return
+            end
+        end
+        if isnat(V.startTime); return; end
+        [eegPosix, eegClock] = eegStartTime();
+        if strcmp(V.kind, 'pi')
+            if isnan(eegPosix); src = 'no EEG start time, 0 used'; return; end
+            o = eegPosix - posixtime(V.startTime);
+        else
+            if isnat(eegClock); src = 'no EEG start time, 0 used'; return; end
+            o = seconds(eegClock - V.startTime);
+        end
+        dur = numel(h.bigplot.bstate)*4;
+        if o > V.time(end) || o < -dur
+            src = sprintf('by the start times the EEG is outside the video (%.1f h), 0 used', o/3600);
+            return
+        end
+        if strcmp(V.kind, 'thermal') && abs(o) > 12*3600
+            src = sprintf('the start times are %.1f h apart, 0 used', o/3600);
+            return
+        end
+        off = o;
+        src = 'from the start times';
+    end
+
+    function [p, t] = eegStartTime()
+        % time of EEG sample 1: posix time (UTC) and clock time of the recording PC (no time zone)
+        p = NaN;
+        Infos = struct();
+        if ismember('Infos', who(h.file)); Infos = h.file.Infos; end
+        t = VS3_thermalTool('eegStart', h.file.Properties.Source);
+        if ~isnat(t) && ~isempty(t.TimeZone)
+            p = posixtime(t);
+            t.TimeZone = '';
+        end
+        if isfield(Infos, 'StartTimePosix') && isnumeric(Infos.StartTimePosix) && isscalar(Infos.StartTimePosix) ...
+                && isfinite(Infos.StartTimePosix)
+            p = double(Infos.StartTimePosix);  % written by File > Convert Open Ephys recording
+        elseif isnan(p) && ~isnat(t)
+            tz = 'local';
+            if isfield(Infos, 'TimeZone') && ischar(Infos.TimeZone) && ~isempty(Infos.TimeZone); tz = Infos.TimeZone; end
+            try
+                tt = t;
+                tt.TimeZone = tz;
+                p = posixtime(tt);
+            catch
+            end
+        end
+    end
+
+    function videoShow(obj, ~)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        h.video.setMode(obj.UserData)
+        videoMenus()
+    end
+
+    function videoAlign(~,~)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        h.video.alignOverlay();
+        videoMenus()
+    end
+
+    function videoOffsets(~,~)
+        % new offsets (video time at EEG sample 1, in s); an empty field takes the start times again
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        kinds = {};
+        prompts = {};
+        defs = {};
+        labels = struct('pi', 'Pi camera', 'thermal', 'Thermal video');
+        for kind = {'pi', 'thermal'}
+            V = h.video.(kind{1});
+            if isempty(V); continue; end
+            kinds{end+1} = kind{1}; %#ok<AGROW>
+            p = sprintf('%s: video time (s) at which EEG sample 1 was recorded (> 0: the EEG started after the video). Now: %s.', ...
+                labels.(kind{1}), V.offsetSource);
+            if ~isempty(V.timeMap); p = [p, ' The recorder timing is used for now.']; end %#ok<AGROW>
+            prompts{end+1} = p; %#ok<AGROW>
+            defs{end+1} = sprintf('%.3f', V.offset); %#ok<AGROW>
+        end
+        prompts{1} = sprintf('Empty field: from the start times again.\n\n%s', prompts{1});
+        an = inputdlg(prompts, 'Video / EEG offsets', [1 90], defs);
+        if isempty(an); return; end
+        for i = 1:numel(kinds)
+            V = h.video.(kinds{i});
+            txt = strtrim(an{i});
+            if isempty(txt)
+                [V.offset, V.offsetSource] = videoDefaultOffset(V);
+            elseif ~strcmp(txt, defs{i})
+                o = str2double(txt);
+                if ~isfinite(o)
+                    errordlg(sprintf('"%s" is not a number of seconds.', txt), 'Video / EEG offsets'); return
+                end
+                V.offset = o;
+                V.offsetSource = 'typed';
+            end
+        end
+        h.video.refresh()
+    end
+
+    function videoTiming(~,~)
+        folder = uigetdir(VS3_fileHistory('get', 'timingFolder', h.path), ...
+            'Select the recorder timing folder (manifest.json, quality.json, thermal-eeg-*.csv)');
+        if isequal(folder, 0); return; end
+        VS3_fileHistory('remember', 'timingFolder', folder, 'Mode', 'folder');
+        videoTimingLoad(folder, true)
+    end
+
+    function videoTimingLoad(folder, interactive)
+        % clock maps of the open videos from a recorder timing folder (VS3_videoTiming); a video
+        % that cannot be mapped keeps its offset
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        msg = {};
+        Infos = struct();
+        if ismember('Infos', who(h.file)); Infos = h.file.Infos; end
+        try
+            VS3_videoTiming('folder', folder);
+        catch err
+            if interactive; errordlg(err.message, 'Recorder timing'); end
+            return
+        end
+        labels = struct('pi', 'Pi camera', 'thermal', 'Thermal video');
+        dur = numel(h.bigplot.bstate)*4;
+        for kind = {'pi', 'thermal'}
+            V = h.video.(kind{1});
+            if isempty(V); continue; end
+            try
+                if strcmp(kind{1}, 'pi')
+                    p = eegStartTime();
+                    if isnan(p); error('VS3:video', 'the EEG start time (Infos.StartTimePosix) is unknown'); end
+                    M = VS3_videoTiming('camera', folder, V, int64(round(p*1e9)));
+                else
+                    M = VS3_videoTiming('thermal', folder, V, VS3_videoTiming('eeg', Infos));
+                end
+                old = V.timeMap;
+                V.timeMap = M;
+                e = V.eegTimes();
+                n = sum(e >= 0 & e < dur);
+                if n == 0
+                    V.timeMap = old;
+                    error('VS3:video', 'its mapped frames do not fall within this recording');
+                end
+                msg{end+1} = sprintf('%s: %d frames mapped onto the EEG (%d without a valid clock observation are not shown).', ...
+                    labels.(kind{1}), n, sum(isnan(e))); %#ok<AGROW>
+            catch err
+                msg{end+1} = sprintf('%s: not mapped, the offset is kept (%s).', labels.(kind{1}), err.message); %#ok<AGROW>
+            end
+        end
+        h.video.refresh()
+        videoMenus()
+        if interactive
+            msgbox([msg, {'', ['Software clock estimates: camera latency, EEG drift and the averaging of the thermal ', ...
+                'frames are not measured.']}], 'Recorder timing')
+        else
+            fprintf('Recorder timing %s:\n%s\n', folder, strjoin(msg, newline)); % scripts, reopened files
+        end
+    end
+
+    function videoTimingClear(~,~)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        for kind = {'pi', 'thermal'}
+            if ~isempty(h.video.(kind{1})); h.video.(kind{1}).timeMap = []; end
+        end
+        h.video.refresh()
+        videoMenus()
+    end
+
+    function videoRoiAdd(~,~)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        kind = 'pi';
+        if isempty(h.video.pi)
+            kind = 'thermal';
+        elseif ~isempty(h.video.thermal)
+            an = questdlg('Draw the ROI on which video?', 'Video ROI', 'Pi camera', 'Thermal', 'Cancel', 'Pi camera');
+            if isempty(an) || strcmp(an, 'Cancel'); return; end
+            if strcmp(an, 'Thermal'); kind = 'thermal'; end
+        end
+        h.video.addRoi(kind)
+        videoMenus()
+    end
+
+    function videoRoiOn(obj, ~)
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        h.video.roiOn = strcmp(obj.Checked, 'off');
+        videoMenus()
+        if h.video.roiOn; h.video.update(); end
+    end
+
+    function videoRoiNow(~,~)
+        if isempty(h.video) || ~isvalid(h.video) || isempty(h.video.rois); return; end
+        h.video.measureRois()
+        h.video.drawRois()
+    end
+
+    function videoRoiRemove(~,~)
+        if isempty(h.video) || ~isvalid(h.video) || isempty(h.video.rois); return; end
+        [sel, ok] = listdlg('ListString', {h.video.rois.name}, 'SelectionMode', 'multiple', 'Name', 'Video ROI', ...
+            'PromptString', 'ROIs to remove:', 'OKString', 'Remove', 'ListSize', [260 160]);
+        if ~ok || isempty(sel); return; end
+        h.video.removeRois(sel)
+        videoMenus()
+    end
+
+%% Sensor data (Pi sensor compared with the EEG / EMG in 4-s epochs), see VS3_sensorView
+% After the sensor comparison of Wenjie (VeryScore3, October 2026): VS3_sensorConvert, VS3_sensorTool,
+% VS3_sensorView.
+    function sensorMenus()
+        onoff = {'off', 'on'};
+        h.toolsMenu_sensorShow.Enable = onoff{~isempty(h.sensorData)+1};
+        h.toolsMenu_sensorSettings.Enable = onoff{~isempty(h.sensorData)+1};
+    end
+
+    function sensorConvert(~,~)
+        % the CSV / CSV.GZ files of one sensor recording (in chronological order) -> one H5
+        [f, p] = uigetfile({'*.csv;*.csv.gz', 'Pi sensor CSV / CSV.GZ'}, ...
+            'Select the sensor files of one recording, in chronological order', VS3_fileHistory('get', 'sensor', pwd), ...
+            'MultiSelect', 'on');
+        if isequal(f, 0); return; end
+        if ischar(f); f = {f}; end
+        VS3_fileHistory('remember', 'sensor', fullfile(p, f{1}));
+        def = fullfile(p, regexprep(f{1}, '(?i)\.csv(\.gz)?', '.h5'));
+        [out, folder] = uiputfile('*.h5', 'Save the sensor recording as', def);
+        if isequal(out, 0); return; end
+        w = VS3_logo('waitbar', 0.3, 'Converting the sensor files...', 'Name', 'Sensor data');
+        try
+            VS3_sensorConvert(fullfile(p, f), fullfile(folder, out));
+        catch err
+            if isvalid(w); close(w); end
+            errordlg(sprintf('The sensor files could not be converted:\n%s', err.message), 'Sensor data')
+            return
+        end
+        if isvalid(w); close(w); end
+        msgbox(sprintf('Sensor recording saved in\n%s\n\nOpen the EEG, then Tools > Sensor data > Import sensor H5.', ...
+            fullfile(folder, out)), 'Sensor data')
+    end
+
+    function sensorImport(~,~)
+        [f, p] = uigetfile('*.h5', 'Select the sensor H5 of this recording', VS3_fileHistory('get', 'sensor', h.path));
+        if isequal(f, 0); return; end
+        VS3_fileHistory('remember', 'sensor', fullfile(p, f));
+        try
+            S = VS3_sensorTool('read', fullfile(p, f));
+            offset = VS3_sensorTool('offset', S.startPosix, h.file.Infos);
+        catch err
+            errordlg(err.message, 'Sensor data')
+            return
+        end
+        [names, keys] = sensorChannelNames();
+        first = find(contains(names, 'EMG', 'IgnoreCase', true), 1);
+        if isempty(first); first = 1; end
+        [chans, ok] = listdlg('ListString', names, 'SelectionMode', 'multiple', 'InitialValue', first, ...
+            'Name', 'Sensor data', 'ListSize', [480 240], 'PromptString', ...
+            {'EEG / EMG traces to compare with the sensor (Ctrl: several).', 'They can be changed later in the comparison.'});
+        if ~ok; return; end
+        sensorClose()
+        h.sensorData = S;
+        h.sensor = struct('source', S.source, 'offset', offset, 'bands', [.5 5; 5 15], 'channels', chans, ...
+            'channelKeys', {keys(chans)}, 'alignment', 'recorded UTC clocks; independent clock accuracy unverified');
+        h.issaved = 0;
+        sensorMenus()
+        sensorShow()
+        h.sensorView.showOverview();
+    end
+
+    function [names, keys] = sensorChannelNames()
+        [names, keys] = h.bigplot.sensorCatalog(sensorOriginalNames());
+    end
+
+    function names = sensorOriginalNames()
+        % names of the recorded channels in the file (traceName, else Infos.Channel)
+        n = size(h.bigplot.oriTraces, 1);
+        names = arrayfun(@(k) sprintf('Channel %d', k), 1:n, 'UniformOutput', false);
+        if ismember('traceName', who(h.file))
+            tn = cellstr(h.file.traceName);
+            if numel(tn) == n; names = tn(:)'; end
+        elseif isfield(h, 'Channel') && numel(h.Channel) == n
+            names = h.Channel;
+        end
+    end
+
+    function sensorShow(~,~)
+        % the comparison window (made again with its settings when it was closed)
+        if isempty(h.sensorData); return; end
+        if ~isempty(h.sensorView) && isvalid(h.sensorView) && isgraphics(h.sensorView.fig)
+            figure(h.sensorView.fig)
+            sensorUpdate(h.bigplot.position)
+            return
+        end
+        sensorCaptureConfig()
+        if ~isempty(h.sensorView) && isvalid(h.sensorView); delete(h.sensorView); end
+        h.sensor.recordingEpochCount = numel(h.bigplot.bstring);
+        h.sensorView = VS3_sensorView(h.sensorData, h.sensor, sensorChannelNames(), @sensorEmg, @goToEpoch, 'on', @sensorChannelNames);
+        h.sensorView.channelMenu.Callback = @sensorChannelChanged;
+        h.sensorView.settingsChanged = @sensorConfigChanged;
+        sensorUpdate(h.bigplot.position)
+    end
+
+    function sensorChannelChanged(~,~)
+        h.sensorView.changeChannel();
+        sensorConfigChanged()
+    end
+
+    function sensorConfigChanged()
+        sensorCaptureConfig()
+        h.issaved = 0;
+    end
+
+    function [x, fs, unit, processing] = sensorEmg(key, ep)
+        % the displayed samples of a trace in epoch ep, for the comparison
+        [x, fs, processing, isDff] = h.bigplot.sensorEpoch(key, ep);
+        unit = 'recorded units';
+        Infos = h.file.Infos;
+        if isfield(Infos, 'Unit'); unit = char(Infos.Unit); end
+        if isDff; unit = '% dF/F'; end
+    end
+
+    function sensorCaptureConfig()
+        if ~isempty(h.sensorView) && isvalid(h.sensorView)
+            h.sensor = h.sensorView.config;
+        end
+    end
+
+    function sensorUpdate(ep)
+        if ~isempty(h.sensorView) && isvalid(h.sensorView) && isgraphics(h.sensorView.fig)
+            h.sensorView.update(ep);
+        end
+    end
+
+    function sensorClose()
+        sensorCaptureConfig()
+        if ~isempty(h.sensorView) && isvalid(h.sensorView); delete(h.sensorView); end
+        h.sensorView = [];
+    end
+
+    function sensorSettings(~,~)
+        % the offset (sensor start minus EEG start) and the two candidate bands
+        if isempty(h.sensorData); return; end
+        sensorCaptureConfig()
+        c = h.sensor;
+        an = inputdlg({'Sensor start minus EEG start (s, > 0: the sensor started later):', ...
+            'Respiration candidate band [low high] (Hz):', 'Heart candidate band [low high] (Hz):'}, ...
+            'Sensor alignment and bands', [1 65], {num2str(c.offset, 16), num2str(c.bands(1,:)), num2str(c.bands(2,:))});
+        if isempty(an); return; end
+        offset = str2double(an{1});
+        bands = [sscanf(an{2}, '%f')'; sscanf(an{3}, '%f')'];
+        try
+            if ~isfinite(offset); error('VS3:sensorBand', 'The offset must be a number of seconds.'); end
+            VS3_sensorTool('spectrum', zeros(800, 1), 200, bands); % checks the bands
+            if any(bands(:) > 20); error('VS3:sensorBand', 'The bands must stay below 20 Hz (low-pass of the sensor).'); end
+        catch err
+            errordlg(err.message, 'Sensor data')
+            return
+        end
+        sensorClose()
+        h.sensor.offset = offset;
+        h.sensor.bands = bands;
+        h.issaved = 0;
+        sensorShow()
     end
 
 %% Photometry (dF/F) functions, see VS3_photometry
@@ -897,20 +1632,22 @@ h.mainFig.KeyPressFcn = @key;
     function filt(~,~)
         req = questdlg('Choose y''a type o''filter', 'Choose one', 'High-pass 0.75Hz', 'High-pass 25 Hz', 'Low-pass 25 Hz', 'High-pass 0.75Hz');
         switch req
-            case 'High-pass 0.75Hz'; [a,b] = cheby2(7,40, 0.75/100, 'high');
-            case 'High-pass 25 Hz'; [a,b] = cheby2(7,40, 25/100, 'high');
-            case 'Low-pass 25 Hz'; [a,b] = cheby2(7,40, 25/100, 'low');
+            case 'High-pass 0.75Hz'; [a,b] = cheby2(7,40, 0.75/100, 'high'); lbl = 'high-pass 0.75 Hz';
+            case 'High-pass 25 Hz'; [a,b] = cheby2(7,40, 25/100, 'high'); lbl = 'high-pass 25 Hz';
+            case 'Low-pass 25 Hz'; [a,b] = cheby2(7,40, 25/100, 'low'); lbl = 'low-pass 25 Hz';
+            otherwise; return % dialog closed
         end
-        h.bigplot.filterTrace(a,b)
+        h.bigplot.filterTrace(a,b, [lbl, ' (Chebyshev II, order 7, 40 dB, zero-phase)'])
     end
 
     function notching(~,~)
         req = questdlg('Choose y''a type o''notch', 'Choose one', '50 Hz', '60 Hz', '50 Hz');
         switch req
-            case '50 Hz'; [a,b] = cheby2(7,40, [46,54]/100, 'stop');
-            case '60 Hz'; [a,b] = cheby2(7,40, [56,64]/100, 'stop');
+            case '50 Hz'; [a,b] = cheby2(7,40, [46,54]/100, 'stop'); lbl = 'notch 50 Hz, 46-54 Hz';
+            case '60 Hz'; [a,b] = cheby2(7,40, [56,64]/100, 'stop'); lbl = 'notch 60 Hz, 56-64 Hz';
+            otherwise; return % dialog closed
         end
-        h.bigplot.filterTrace(a,b)
+        h.bigplot.filterTrace(a,b, [lbl, ' (Chebyshev II band-stop, 40 dB, zero-phase)'])
     end
 
 %% Navigation functions
@@ -951,6 +1688,8 @@ h.mainFig.KeyPressFcn = @key;
             switch evnt.Key
                 case 'a'; goPrev()
                 case 'd'; goNext()
+                case 'space' % play the epoch in the video column
+                    if ~isempty(h.video) && isvalid(h.video); h.video.togglePlay(); end
                 case 'uparrow'; h.bigplot.changeGain('plus',1)
                 case 'downarrow'; h.bigplot.changeGain('minus',1)
                 case 'w'; h.bigplot.changeB('w'); h.issaved = 0;             

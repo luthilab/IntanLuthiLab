@@ -38,6 +38,11 @@ classdef VS3_tracesPlot < handle
         thermColor = [.75 .15 .1] % color of the per-epoch temperature line
         navigateFunction          % click-to-navigate callback shared by the hypnogram and the temperature panel
         dffScale = []             % display units per % of dF/F of the photometry trace (see showDFF)
+        oriScale = []             % per recorded channel: factor back to the units of the file (the import divides some channels, see VS3_main)
+        rowInfo                   % per display row: scale (to the units of the file, % for a dF/F), steps (filters...), noData (samples without dF/F at start / end), dff; see exportTraces
+        video = []                % video column right of the traces (VS3_videoPanel), [] = no video open
+        centerTraces = false      % centre every trace in its slot on screen (DC levels of the Open Ephys acquisition board)
+        epochChangedFunction = [] % called with the epoch after every update (sensor comparison, VS3_sensorView)
     end
     
     methods
@@ -53,7 +58,13 @@ classdef VS3_tracesPlot < handle
             
             self.traces = h.tra;
             self.oriTraces = h.tra;
+            self.oriScale = ones(size(h.tra,1),1);
+            if isfield(h, 'traScale') && numel(h.traScale) == size(h.tra,1)
+                self.oriScale = h.traScale(:);
+            end
+            self.rowInfo = struct('scale', num2cell(self.oriScale), 'steps', {{}}, 'noData', [0 0], 'dff', false);
             self.time = linspace(0, length(self.traces)/200, length(self.traces)); % the time vector for the traces
+            if isfield(h, 'centerTraces'); self.centerTraces = h.centerTraces; end
             
             % The positions in points for each epoch
             self.points = [1:800:length(self.bstate)*800; 800:800:length(self.bstate)*800];
@@ -69,8 +80,10 @@ classdef VS3_tracesPlot < handle
             self.graphLines = cell(size(self.traces,1),1); % will contain the lines objects in (:,1)
             self.selectedTraces = zeros(size(self.traces,1),1); % if the traces are selected or not
             for i = 1:size(self.traces,1)
+                y = self.traces(i,1:self.points(2,self.position+self.width));
+                if self.centerTraces; y = y - median(y, 'omitnan'); end % display only (see updatePlot)
                 self.graphLines{i} = line(self.time(1:self.points(2,self.position+self.width)),...
-                    self.traces(i,1:self.points(2,self.position+self.width))-self.space*i,...
+                    y-self.space*i,...
                     'ButtonDownFcn', @selected,...
                     'UserData', [i,i]); % The userdata is used to identify the traces, (1) is the position (2) is the original trace index
             end
@@ -328,16 +341,21 @@ classdef VS3_tracesPlot < handle
                     case 'minus'; self.space = self.space-0.0001;
                 end
             else
+                g = 1;
                 switch sign
-                    case 'plus'; self.traces(sele,:) = self.traces(sele,:)*1.1*coef;
-                    case 'minus'; self.traces(sele,:) = self.traces(sele,:)/(1.1*coef);
+                    case 'plus'; g = 1.1*coef;
+                    case 'minus'; g = 1/(1.1*coef);
+                end
+                self.traces(sele,:) = self.traces(sele,:)*g;
+                for r = sele(:)' % the display gain is undone when the traces are exported
+                    self.rowInfo(r).scale = self.rowInfo(r).scale/g;
                 end
             end
             self.updatePlot()
         end
-        
-        % Function to filter the traces
-        function filterTrace(self,a,b)
+
+        % Function to filter the traces (label: what the filter is, kept for the export)
+        function filterTrace(self,a,b,label)
             sele = find(self.selectedTraces);
             if isempty(sele)
                 errordlg('C''mon, you need to select at least one trace.')
@@ -345,6 +363,9 @@ classdef VS3_tracesPlot < handle
             end
             for i = 1:length(sele)
                 self.traces(sele(i),:) = filtfilt(a, b, self.traces(sele(i),:));
+                if nargin > 3 && ~isempty(label)
+                    self.rowInfo(sele(i)).steps{end+1} = label;
+                end
             end
             self.updatePlot()
         end
@@ -372,7 +393,16 @@ classdef VS3_tracesPlot < handle
             else
                 self.traces(row,:) = self.oriTraces(idx(2),:);
             end
+            self.rowInfo(row) = self.rawRowInfo(idx(2:end));
             self.ChannelNames{row} = regexprep(self.ChannelNames{row}, ' dF/F$', '');
+        end
+
+        function r = rawRowInfo(self, chans)
+            % rawRowInfo  rowInfo of a row showing recorded channel chans(1) (minus chans(2)), unprocessed
+            r = struct('scale', self.oriScale(chans(1)), 'steps', {{}}, 'noData', [0 0], 'dff', false);
+            if numel(chans) == 2 && self.oriScale(chans(2)) ~= self.oriScale(chans(1))
+                r.steps = {'units mixed: the two channels were scaled differently at loading'};
+            end
         end
         
         % Function to differenciate two traces
@@ -390,6 +420,8 @@ classdef VS3_tracesPlot < handle
                 case 'No'
                     self.traces(sele(1),:) = newt;
                     self.traces(sele(2),:) = [];
+                    self.rowInfo(sele(1)) = self.rawRowInfo([oritra1, oritra2]);
+                    self.rowInfo(sele(2)) = [];
                     delete(self.graphLines{sele(2)})
                     self.graphLines(sele(2)) = [];
                     self.selectedTraces(sele(2)) = [];
@@ -398,6 +430,7 @@ classdef VS3_tracesPlot < handle
                     self.ChannelNames(sele(2)) = [];
                 case 'Yes'
                     self.traces(end+1,:) = newt;
+                    self.rowInfo(end+1) = self.rawRowInfo([oritra1, oritra2]);
                     self.graphLines{end+1} = line(self.plotax, self.time(1:self.points(2,self.position+self.width)),...
                         self.traces(end,1:self.points(2,self.position+self.width))-self.space*size(self.traces,1),...
                         'ButtonDownFcn', self.selectedFunction,...
@@ -424,7 +457,8 @@ classdef VS3_tracesPlot < handle
             self.graphLines(sele) = [];
             self.selectedTraces(sele) = [];
             self.ChannelNames(sele) = [];
-            
+            self.rowInfo(sele) = [];
+
             self.updatePlot()
             self.initiateNames()
         end
@@ -439,7 +473,8 @@ classdef VS3_tracesPlot < handle
             self.traces(sele,:) = self.traces([sele(2), sele(1)],:);
             self.graphLines(sele) = self.graphLines([sele(2), sele(1)]);
             self.ChannelNames(sele) = self.ChannelNames([sele(2), sele(1)]);
-            
+            self.rowInfo(sele) = self.rowInfo([sele(2), sele(1)]);
+
             self.updatePlot()
             self.initiateNames()
         end
@@ -460,6 +495,7 @@ classdef VS3_tracesPlot < handle
                         self.graphLines(sele-1:sele) = self.graphLines([sele, sele-1]);
                         self.selectedTraces(sele-1:sele) = self.selectedTraces([sele, sele-1]);
                         self.ChannelNames(sele-1:sele) = self.ChannelNames([sele, sele-1]);
+                        self.rowInfo(sele-1:sele) = self.rowInfo([sele, sele-1]);
                     end
                 case 'dn'
                     if sele == length(self.selectedTraces)
@@ -469,6 +505,7 @@ classdef VS3_tracesPlot < handle
                         self.graphLines(sele:sele+1) = self.graphLines([sele+1, sele]);
                         self.selectedTraces(sele:sele+1) = self.selectedTraces([sele+1, sele]);
                         self.ChannelNames(sele:sele+1) = self.ChannelNames([sele+1, sele]);
+                        self.rowInfo(sele:sele+1) = self.rowInfo([sele+1, sele]);
                     end
             end
             self.updatePlot()
@@ -502,6 +539,8 @@ classdef VS3_tracesPlot < handle
                     % night) and kept within 1.5 slots of it; display only
                     y = y - median(y, 'omitnan');
                     y = min(max(y, -1.5*self.space), 1.5*self.space);
+                elseif self.centerTraces
+                    y = y - median(y, 'omitnan'); % display only: the samples, filters and export are unchanged
                 end
                 set(self.graphLines{i}, 'XData', self.time(pointsBorder),...
                     'YData', y - self.space*i)
@@ -567,6 +606,14 @@ classdef VS3_tracesPlot < handle
             end
             % update the temperature panel (thermal video), if displayed
             self.updateThermal()
+            % update the video column (Tools > Video), if a video is open
+            if ~isempty(self.video) && isvalid(self.video)
+                self.video.update()
+            end
+            % and the sensor comparison (Tools > Sensor data), if open
+            if ~isempty(self.epochChangedFunction)
+                self.epochChangedFunction(self.position)
+            end
         end
 
         %% Temperature panel (thermal video, see VS3_thermalTool)
@@ -680,15 +727,26 @@ classdef VS3_tracesPlot < handle
         end
 
         function layoutAxes(self, withThermal)
-            % layoutAxes  Make room above the hypnogram for the temperature panel (or give it back).
+            % layoutAxes  Make room above the hypnogram for the temperature panel (or give it back),
+            % and right of the traces for the video column when a video is open (VS3_videoPanel).
+            if nargin < 2
+                withThermal = ~isempty(self.thermax) && isgraphics(self.thermax);
+            end
+            withVideo = ~isempty(self.video) && isvalid(self.video) && self.video.isOpen();
+            w = .9;
+            if withVideo; w = .58; end
             if withThermal
-                self.plotax.Position = [.05 .40 .9 .55];
-                self.localhypno.Position = [.05 .35 .9 .05];
-                self.namax.Position = [.955 .36 .3 .61];
+                y = .40; ht = .55;
             else
-                self.plotax.Position = [.05 .3 .9 .65];
-                self.localhypno.Position = [.05 .25 .9 .05];
-                self.namax.Position = [.955 .26 .3 .71];
+                y = .3; ht = .65;
+            end
+            self.plotax.Position = [.05 y w ht];
+            self.localhypno.Position = [.05 y-.05 w .05];
+            self.namax.Position = [.05+w+.005 y-.04 .3 ht+.06];
+            if withVideo
+                self.video.place([.70 y-.05 .295 ht+.07])
+            elseif ~isempty(self.video) && isvalid(self.video)
+                self.video.hide()
             end
         end
 
@@ -741,6 +799,7 @@ classdef VS3_tracesPlot < handle
             end
             self.traces(row,:) = v*sc;
             self.dffScale = sc;
+            self.rowInfo(row) = struct('scale', 1/sc, 'steps', {{dffStep(P)}}, 'noData', [ok(1)-1, numel(v)-ok(end)], 'dff', true);
             self.ChannelNames{row} = [regexprep(self.ChannelNames{row}, ' dF/F$', ''), ' dF/F'];
             self.updatePlot()
             self.initiateNames()
@@ -749,6 +808,68 @@ classdef VS3_tracesPlot < handle
         function tf = isDFF(self, row)
             % isDFF  Is display row 'row' a photometry dF/F (see showDFF)?
             tf = numel(self.ChannelNames) >= row && ischar(self.ChannelNames{row}) && endsWith(self.ChannelNames{row}, ' dF/F');
+        end
+
+        %% Export of the displayed traces (File > Export displayed traces, see VS3_main)
+        function [X, names, rows] = exportTraces(self)
+            % exportTraces  The traces as they are displayed, at 200 Hz, one row per trace in the order
+            % of the screen (suppressed traces left out): filters, notches, bipolar differences and the
+            % photometry dF/F are kept; the display gain and the scaling of the import are undone, so
+            % the values are in the units of the file (dF/F in %, NaN where there is no dF/F).
+            % rows(i).channels = recorded channel(s) of row i (two: the first minus the second),
+            % rows(i).steps = what was applied to it, in order; rows(i).dff = true for a dF/F.
+            n = size(self.traces, 1);
+            X = zeros(size(self.traces));
+            rows = struct('channels', cell(n,1), 'steps', cell(n,1), 'dff', cell(n,1));
+            for i = 1:n
+                r = self.rowInfo(i);
+                X(i,:) = self.traces(i,:)*r.scale;
+                X(i, 1:r.noData(1)) = NaN;
+                X(i, end-r.noData(2)+1:end) = NaN;
+                ud = self.graphLines{i}.UserData;
+                rows(i).channels = ud(2:end);
+                rows(i).steps = r.steps;
+                rows(i).dff = r.dff;
+            end
+            names = self.ChannelNames(:)';
+        end
+
+        %% Sensor comparison (Tools > Sensor data, see VS3_sensorView)
+        function [labels, keys] = sensorCatalog(self, originalNames)
+            % sensorCatalog  One entry per display row: its name and the names of its recorded
+            % channel(s) in the file; keys = the recorded channels ('3' or '3-4' for a difference),
+            % which follow the row when the traces are swapped or suppressed.
+            n = size(self.traces, 1);
+            labels = cell(1, n);
+            keys = cell(1, n);
+            for row = 1:n
+                src = self.graphLines{row}.UserData(2:end);
+                keys{row} = strjoin(arrayfun(@num2str, src, 'UniformOutput', false), '-');
+                labels{row} = sprintf('%s | original: %s', self.ChannelNames{row}, strjoin(originalNames(src), ' - '));
+            end
+        end
+
+        function [x, fs, processing, isDff] = sensorEpoch(self, key, ep)
+            % sensorEpoch  The displayed samples of the row with recorded channel(s) 'key' in epoch
+            % ep, at 200 Hz, in the units of the file (filters kept, display gain undone).
+            row = [];
+            for k = 1:numel(self.graphLines)
+                src = self.graphLines{k}.UserData(2:end);
+                if strcmp(strjoin(arrayfun(@num2str, src, 'UniformOutput', false), '-'), key); row = k; break; end
+            end
+            if isempty(row); error('VS3:sensorEmg', 'The selected trace is no longer displayed.'); end
+            fs = 200;
+            first = (ep-1)*800 + 1;
+            last = ep*800;
+            if first < 1 || last > size(self.traces, 2); error('VS3:sensorEmg', 'Incomplete displayed epoch.'); end
+            r = self.rowInfo(row);
+            x = self.traces(row, first:last)*r.scale;
+            idx = first:last;
+            x(idx <= r.noData(1) | idx > size(self.traces, 2) - r.noData(2)) = NaN;
+            processing = strjoin(r.steps, '; ');
+            if isempty(processing); processing = 'No additional main-window filter'; end
+            processing = [processing, '; main-window samples at 200 Hz; display gain removed'];
+            isDff = r.dff;
         end
 
         function deleteAxes(self)
@@ -761,8 +882,21 @@ classdef VS3_tracesPlot < handle
             end
             self.thermax = [];
         end
-        
+
     end
-    
+
+end
+
+function s = dffStep(P)
+% dffStep  What the dF/F of P (VS3_photometry) is, for the export of the traces
+how = {};
+if isfield(P, 'method') && ~isempty(P.method); how{end+1} = sprintf('%s baseline', P.method); end
+if isfield(P, 'fSignal') && ~isempty(P.fSignal)
+    car = sprintf('carriers %.2f Hz signal', P.fSignal);
+    if isfield(P, 'fIso') && ~isempty(P.fIso) && ~isnan(P.fIso); car = sprintf('%s / %.2f Hz purple', car, P.fIso); end
+    how{end+1} = sprintf('%s demodulated from the full-rate channel', car);
+end
+if isfield(P, 'fs'); how{end+1} = sprintf('computed at %g Hz', P.fs); end
+s = sprintf('photometry dF/F in %% (%s), interpolated to 200 Hz', strjoin(how, '; '));
 end
 

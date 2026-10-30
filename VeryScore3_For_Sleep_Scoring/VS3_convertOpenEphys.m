@@ -34,7 +34,11 @@ function files = VS3_convertOpenEphys(sourceFolder, targetFolder, varargin)
 %
 % OPTIONS (name/value, all optional)
 %   'unit'         'V' (default) | 'uV' | 'raw/1000' (int16 value / 1000, the first VeryScore converter)
-%   'overwrite'    true (default) | false: skip recordings whose .mat already exists
+%   'overwrite'    true (default) | false: skip recordings whose .mat already exists. When the
+%                  folders are asked and converted files exist already, you are asked.
+%   'channels'     channels to convert: their names ({'CH6','CH7'}) or their numbers in the
+%                  recording; empty (default) = all. When the folders are asked, you choose the
+%                  recordings (when there are several) and the channels in lists.
 %   'interactive'  true (default when the folders are asked) | false: no dialogs, messages in the
 %                  command window only
 %
@@ -44,7 +48,7 @@ function files = VS3_convertOpenEphys(sourceFolder, targetFolder, varargin)
 % Alejandro Osorio-Forero with Claude, 2026.
 
 files = {};
-o = struct('unit', 'V', 'overwrite', true, 'interactive', []);
+o = struct('unit', 'V', 'overwrite', true, 'interactive', [], 'channels', []);
 for k = 1:2:numel(varargin)
     if ~isfield(o, varargin{k}); error('VS3_convertOpenEphys:option', 'Unknown option ''%s''.', varargin{k}); end
     o.(varargin{k}) = varargin{k + 1};
@@ -78,6 +82,18 @@ if isempty(recs)
     msg = sprintf('No Open Ephys recording (experiment*\\recording*\\structure.oebin with data) found below\n%s', sourceFolder);
     report(o, msg, 'warn');
     return
+end
+if o.interactive
+    % the recordings (when there are several), the channels, the files converted already
+    [recs, o.channels, ok] = chooseRecordings(recs, o.channels);
+    if ~ok; return; end
+    done = arrayfun(@(r) ~isempty(dir(fullfile(targetFolder, [r.name, '_*', r.suffix, '.mat']))), recs);
+    if any(done)
+        an = questdlg(sprintf('%d of the recordings seem to be converted already in %s.', sum(done), targetFolder), ...
+            'Open Ephys conversion', 'Skip them', 'Convert them again', 'Cancel', 'Skip them');
+        if isempty(an) || strcmp(an, 'Cancel'); return; end
+        o.overwrite = strcmp(an, 'Convert them again');
+    end
 end
 w = [];
 if o.interactive
@@ -138,14 +154,30 @@ for k = 1:nCh
     if isfield(chk, 'units'); chUnits{k} = chk.units; else; chUnits{k} = 'uV'; end
 end
 streamDir = fullfile(recDir, 'continuous', c.folder_name);
+% the channels to convert (option 'channels': names or numbers in the recording, empty = all)
+sel = 1:nCh;
+if iscell(opt.channels) || isstring(opt.channels)
+    sel = find(ismember(names, cellstr(opt.channels)));
+elseif ~isempty(opt.channels)
+    sel = unique(opt.channels(:)', 'stable');
+    if any(sel < 1 | sel > nCh | sel ~= round(sel)); error('channels %s do not exist (%d channels)', mat2str(sel), nCh); end
+end
+if isempty(sel)
+    fprintf('  none of the chosen channels is in this recording, skipped\n');
+    return
+end
+nRecorded = nCh;
 
 % ---- data: the raw samples of every channel, in physical units ----
 progress(0.05, 'reading the samples');
 datFile = fullfile(streamDir, 'continuous.dat');
 fid = fopen(datFile, 'r');
 if fid < 0; error('cannot open %s', datFile); end
-raw = fread(fid, [nCh, Inf], 'int16=>int16');
+raw = fread(fid, [nRecorded, Inf], 'int16=>int16');
 fclose(fid);
+raw = raw(sel, :);
+names = names(sel); bitVolts = bitVolts(sel); chUnits = chUnits(sel);
+nCh = numel(sel);
 % volts: bit_volts is given in the unit of the channel ('uV' for headstage, 'V' for ADC inputs)
 toVolts = bitVolts .* cellfun(@(u) unitFactor(u), chUnits);
 switch lower(opt.unit)
@@ -238,6 +270,7 @@ Infos.OpenEphysVersion = version;
 Infos.Machine = machine;
 Infos.SettingsDate = settingsDate;
 Infos.RecordedChannels = recorded;
+Infos.ConvertedChannels = sel;  % numbers of the converted channels in the recording (all when nothing was chosen)
 Infos.Converter = 'VS3_convertOpenEphys (Open Ephys binary -> VeryScore), VeryScore3 3.0, raw channels';
 Infos.ConvertedOn = char(string(datetime('now'), fmt));
 traceName = names; %#ok<NASGU>
@@ -267,11 +300,66 @@ fprintf('  %d channels (%s), %d samples at %g Hz = %.2f h, start %s, %d dropped 
 end
 
 %% ======================================================================= helpers
+function [recs, channels, ok] = chooseRecordings(recs, channels)
+% chooseRecordings  Lists to choose the recordings (when there are several) and their channels.
+ok = false;
+info = cell(1, numel(recs));
+chans = cell(1, numel(recs));
+for k = 1:numel(recs)
+    [txt, chans{k}] = describeRecording(recs(k).recDir);
+    info{k} = sprintf('%s   |   %s   |   %s', [recs(k).name, recs(k).suffix], txt, recs(k).recDir);
+end
+if numel(recs) > 1
+    [sel, okd] = listdlg('ListString', info, 'SelectionMode', 'multiple', 'InitialValue', 1:numel(recs), ...
+        'ListSize', [900 260], 'Name', 'Open Ephys conversion', 'PromptString', 'Recordings to convert:');
+    if ~okd || isempty(sel); return; end
+    recs = recs(sel);
+    chans = chans(sel);
+end
+names = {};
+for k = 1:numel(chans); names = [names, chans{k}(~ismember(chans{k}, names))]; end %#ok<AGROW>
+if isempty(channels) && ~isempty(names)
+    [sel, okd] = listdlg('ListString', names, 'SelectionMode', 'multiple', 'InitialValue', 1:numel(names), ...
+        'ListSize', [300 320], 'Name', 'Open Ephys conversion', ...
+        'PromptString', {'Channels to convert (Ctrl / Shift: several).', 'Memory monitoring is never converted.'});
+    if ~okd || isempty(sel); return; end
+    if numel(sel) < numel(names); channels = names(sel); end
+end
+ok = true;
+end
+
+function [txt, names] = describeRecording(recDir)
+% describeRecording  'stream: n channels, Fs Hz, duration' and the channel names of the data stream
+txt = '?';
+names = {};
+try
+    oe = jsondecode(fileread(fullfile(recDir, 'structure.oebin')));
+    for k = 1:numel(oe.continuous)
+        c = item(oe.continuous, k);
+        if c.num_channels <= 0 || ~isempty(regexpi(c.stream_name, 'memory', 'once')); continue; end
+        d = dir(fullfile(recDir, 'continuous', c.folder_name, 'continuous.dat'));
+        dur = NaN;
+        if ~isempty(d); dur = d.bytes/(2*c.num_channels*c.sample_rate); end
+        txt = sprintf('%s: %d channels, %g Hz, %.2f h', c.stream_name, c.num_channels, c.sample_rate, dur/3600);
+        names = arrayfun(@(i) item(c.channels, i).channel_name, 1:c.num_channels, 'UniformOutput', false);
+        return
+    end
+catch
+end
+end
+
 function recs = findRecordings(root)
 % every experiment*/recording*/structure.oebin below root, at any depth, with a readable name.
 % Record nodes that hold no data stream (only memory_usage) are left out, so that a session with
 % one real node does not get a "_RecordNode115" suffix just because a second node exists.
+% A folder inside a recording (continuous, or the folder of a stream) means that recording.
 hits = dir(fullfile(root, '**', 'structure.oebin'));
+up = root;
+for k = 1:3
+    if ~isempty(hits); break; end
+    up = fileparts(up);
+    if isfile(fullfile(up, 'structure.oebin')); root = up; hits = dir(fullfile(root, 'structure.oebin')); end
+end
 recs = struct('recDir', {}, 'name', {}, 'suffix', {}, 'settingsFile', {});
 normRoot = normPath(root);
 for k = 1:numel(hits)

@@ -9,6 +9,8 @@ VeryScore3 is the continuation of **VeryScore2**, written by Romain Cardis and A
 - **Auto-scoring** that learns from scored recordings and adapts to each new one (about 90 % agreement with a human scorer, as good as a second human)
 - **Thermal video**: the temperature of the animal from an Optris thermal camera, in a panel above the hypnogram
 - **Photometry**: dF/F of a fibre photometry channel recorded with the EEG
+- **Video**: the Raspberry Pi camera and the thermal camera in a column next to the traces, at the epoch you score, played over its 4 s, one above the other or the thermal image over the camera, with ROI traces
+- **Sensor data**: the respiration / heart sensor of the Pi compared with the EEG / EMG in each 4-s epoch
 - **Open Ephys**: recordings converted into VeryScore files from the File menu
 - **Summary figure**: hypnogram, EEG sigma activity, temperature and photometry of the whole recording
 - Everything in one program, `VS3_main`. See CHANGELOG.md for the full list.
@@ -21,7 +23,7 @@ _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it
 1. Add the folder `VeryScore3_For_Sleep_Scoring` to the MATLAB path (the subfolders are added by the tools when they need them).
 2. Type `VS3_main`: the start screen shows the logo and what to do first. Import a file in the "File" menu.
 
-Requirements: MATLAB R2022b or newer (tested with R2024b), Signal Processing Toolbox. Optional: Parallel Computing Toolbox (faster thermal video analysis), Image Processing Toolbox (only for the `shavedPatch`, `mouseBody` and `hottestBlob` thermal ROI methods), Python 3 with `numpy` and `h5py` (only to convert thermal videos). The Statistics toolbox is not needed.
+Requirements: MATLAB R2022b or newer (tested with R2024b), Signal Processing Toolbox. The videos are read by MATLAB itself (no Python, no toolbox). Optional: Parallel Computing Toolbox (faster thermal video analysis), Image Processing Toolbox (only for the `shavedPatch`, `mouseBody` and `hottestBlob` thermal ROI methods), Python 3 with `numpy` and `h5py` (only to convert thermal videos). The Statistics toolbox is not needed.
 
 If VeryScore2 is also on your MATLAB path, remove it: both have files with the same names (the thermal code, `renameFileToBt`, ...).
 
@@ -33,11 +35,11 @@ The files should be named like this:
 
 AnimalName_recordingNumber_condition_t.mat
 
-A file holds the variable `traces` (one row per channel) and a structure `Infos` with at least the sampling rate `Infos.Fs`. Optional: `Infos.Channel` or `traceName` (channel names), `Infos.StartTime` (time of the first sample, used to align a thermal video). VeryScore3 saves the scoring as `b` (one letter per 4-s epoch) and `bTrans`, the temperature as `Thermal` and the dF/F as `Photometry`, all in the same file.
+A file holds the variable `traces` (one row per channel) and a structure `Infos` with at least the sampling rate `Infos.Fs`. Optional: `Infos.Channel` or `traceName` (channel names), `Infos.StartTime` (time of the first sample, used to align a thermal video). VeryScore3 saves the scoring as `b` (one letter per 4-s epoch) and `bTrans`, the temperature as `Thermal`, the dF/F as `Photometry`, the videos shown next to the traces as `Video` and the sensor settings as `Sensor`, all in the same file.
 
 Your raw traces now appear.
 
-**Important notice: All the display changes you will do on the traces, such as filters, gain changes or supressing traces are not saved in the file. The only thing saved is the b string containing your scoring (and the Thermal and Photometry results when you compute them). This means you should not be afraid to make display changes to ease your scoring.**
+**Important notice: All the display changes you will do on the traces, such as filters, gain changes or supressing traces are not saved in the file. The only thing saved is the b string containing your scoring (and the Thermal and Photometry results when you compute them). This means you should not be afraid to make display changes to ease your scoring. To keep the traces as you see them, use File > Export displayed traces: they go to a new file, the scored file is not touched.**
 
 **Second notice: In the lab we are using super nintendo USB controllers to score. Coupled with a small software such as JoyToKey, you can score much faster and more confortably (https://joytokey.net/en/). We provide a configuration for JoyToKey that is prepared for super nintendo controllers in the VeryScore3 folder (JTK_scoring.cfg).**
 
@@ -120,6 +122,15 @@ Next epoch of a state: **shift+w**, **shift+n**, **shift+r**, **shift+m**, **shi
 **Import randomly:** Let you select multiple files and give them for you to score in a random order without knowing which one. This is very useful in case you need to score your files in a blind manner. We are all subjected to treatment biases so doing this removes this concern.
 
 **Save:** Save your current scoring. The file will then receive a **b** in its name to show that is contains scoring data (`name_t.mat` and `name.mat` become `name_bt.mat`). If you load that file again, the saved scoring will appear.
+
+**Export displayed traces (.mat)...:** saves the traces as you see them (filters, notches, bipolar traces, the photometry dF/F; in the order of the screen, without the suppressed traces) in a new `.mat` file, for analyses outside VeryScore3. You choose the name and the folder, then the names of the channels (leave a name empty to leave that trace out) and the start time. The file holds:
+- `traces`: one row per channel at 200 Hz (the rate of the display), in the units of the recording: the display gain and the scaling done at loading are undone. The dF/F is in %, NaN in the first and last seconds where there is none.
+- `traceName`: the names of the channels.
+- `traceProcessing`: what was done to each trace (source channel(s), filters in the order applied, dF/F method).
+- `Infos`: `Fs` (200), `StartTime` (time of the first sample), `Channel`, `ChannelUnits`, `Source` (the scored file).
+- `SourceInfos`: the `Infos` of the scored file.
+
+The exported file opens in VeryScore3 like any other file. The scoring is not in it; it stays in the `_bt.mat` file.
 
 **Edit file Infos:** This allows you to add field to the Infos structure contained in the file. You can precise treatments, important time points, or whatever you would like to use for future analysis with this file. Like mentionned above, you can create the field **Channel** to add names to your traces. An idea is to put the name of the person that did the scoring.
 
@@ -232,6 +243,46 @@ Reading the panel: during wake the value also follows the movement of the animal
 The analysis code is in the `thermal` folder (`ThermalH5`, `thermal_roi_timeseries`, `thermal_align_to_eeg`, `estimate_offset`, `roi_methods`, `python`), the tool that drives it from the menu is `VS3_thermalTool.m`.
 
 
+## Video (Pi camera and thermal camera next to the traces)
+
+When the animal was filmed during the EEG recording, the videos can be watched next to the traces while you score. Open a video and a column appears right of the traces (they get narrower); close the last video and the column disappears. The column shows the frame at the start of the epoch you are scoring and follows every move of the main window (keys, clicks in the hypnogram, the summary figure...).
+
+**Tools > Video >**
+
+**Open Pi camera video...:** the video of the Raspberry Pi camera (`.mp4`, `.avi`), with its `<name>.timestamps.csv` next to it: the time of every frame (`video_pts_us`) and the clock time of the first one (`estimated_utc`). The frames are found by these times, not by a frame rate, so a video whose frame rate varies stays exact. Without the timestamps file the nominal frame rate is used and you are told.
+
+**Open thermal video (.ravi / .h5)...:** the `.ravi` of PIX Connect read directly (energy counts; nothing to convert), or the `.h5` made by Tools > Thermal video (degrees when the camera calibration was added). When the temperature of this video was analysed, its offset is used.
+
+**Show:** Pi camera, Thermal, Pi and thermal (one above the other), or **Thermal over Pi**: the thermal image laid over the camera, its warm parts opaque and the cold ones transparent (slider in the column for the opacity). The same choice is in the column.
+
+**Align thermal on Pi camera...:** click at least 3 points that you can find in both videos (corners of the cage, the head...) on the camera, Enter, then the same points in the same order on the thermal video: the thermal image is moved, scaled and turned onto the camera (with more than 3 points the remaining error is reported). Until then it is simply fitted into the camera image.
+
+**Play 4 s** (button of the column, or the **space bar**): plays the 4 s of the epoch at the real speed (or 0.5x, 0.25x, 2x), with a black line running over the traces at the time of the frame. The scoring keys keep working after a click in the column.
+
+**Change video/EEG offsets...:** as for the temperature, the offset is the video time (seconds) at which EEG sample 1 was recorded: positive when the EEG started after the video. It is computed from the start times of the recordings: for the Pi camera the clock time of its first frame (UTC) against `Infos.StartTimePosix` (written by File > Convert Open Ephys recording; else `Infos.StartTime` in the time zone of the file), for the thermal video its start time against `Infos.StartTime` (clocks of the PCs; start times more than 12 h apart are not used). Type another value to correct it; leave the field empty to compute it again. The offset and where it comes from are shown above the videos.
+
+**Load recorder timing folder...:** the folder written by the recorder for a saved recording (`manifest.json`, `quality.json`, `evidence.jsonl`, `thermal-frame-times.csv`, `thermal-eeg-alignment.csv`, `thermal-eeg-quality.json`): it maps every frame onto the EEG instead of a single offset, from the observations of the camera clock by the PC (Pi camera) and the EEG sample number of every thermal frame (thermal camera, found by the rate, first sample, length and start of the EEG). Frames without a valid clock observation are not shown. These are estimates of the software clocks: the latency of the cameras, the drift of the EEG and the averaging of the thermal frames are not measured. **Clear recorder timing** goes back to the offsets.
+
+**Add ROI...:** draw a rectangle (two opposite corners) on the camera or on the thermal video. For every frame of the epoch a Pi ROI gives its movement (dx, dy in pixels, tracked from frame to frame from its place in the first frame of the epoch) and its brightness, a thermal ROI its mean (degrees or counts). The traces of the epoch are drawn under the videos with the amplitude spectrum of the one you click (respiration of a sleeping mouse, about 3 Hz, appears in the dy of a ROI on the flank). **Measure ROIs at every epoch** (on by default) measures them at each new epoch: about 1-2 s for the 120 frames of a Pi epoch; switch it off to score faster and use **Measure ROIs of this epoch**. **Remove ROIs...** removes some of them.
+
+**Close Pi camera video / Close thermal video.**
+
+**Save** stores the videos, their offsets, the view, the alignment of the thermal image and the ROIs as the variable **Video** in the scored file: the next time the file is loaded the videos are opened again (a video that was moved is also looked for in the folder of the scored file). The videos themselves are never written. In blind mode (Import randomly) the column shows no file name.
+
+The code is in `VS3_videoPanel.m` (the column), `VS3_video.m` (reading the frames: `V = VS3_video(file); img = V.frame(k); k = V.frameAt(t)`) and `VS3_videoTiming.m` (the recorder timing maps). From a script: `VS3_main(file, 'pi', piVideo, 'thermal', thermalVideo)` opens a file with its videos.
+
+
+## Sensor data (Pi sensor and EEG / EMG)
+
+**File > Sensor CSV files to one H5...:** the CSV / CSV.GZ files of one recording of the Pi sensor, selected in chronological order, are put together in one `.h5` (the raw ADC values, the acquisition time of every sample, the gaps, a quality flag per sample: clipping, steps, timing, warm-up, demo; nothing is filled in). The CSV files are not changed and an existing `.h5` is never overwritten. From a script: `VS3_sensorConvert({'recording_PWM.csv'}, 'recording_sensor.h5')`.
+
+**Tools > Sensor data > Import sensor H5...:** with the EEG file open, select the `.h5` and the traces to compare it with (each shown with its name and the name of its recorded channel, for example `EMG_A | original: CH6`; Ctrl for several). The comparison window opens on **Full recording**: for every 4-s epoch the strongest peak of the sensor and of each trace in the respiration band (0.5-5 Hz) and in the heart band (5-15 Hz), in Hz (left axis) and per minute (right axis), with x marks where the heart peak can be a harmonic of the respiration. Click a point to see that epoch in **Current 4 s - waveforms & FFT**: the sensor (low-pass 20 Hz, zero-phase) and the traces as displayed in the main window (filters, notches, differences kept, display gain undone), with their amplitude spectra (Hann window, 0.25-Hz resolution). The window follows the epoch of the main window, and Previous / Next move both.
+
+The sensor is aligned with the EEG by the clock times: **sensor start minus EEG start** (positive when the sensor started later), from the first UTC time of the CSV and `Infos.StartTimePosix`; **Alignment and candidate bands...** changes it and the bands. The accuracy of these clocks has not been measured. Epochs with missing samples, clipping, steps or flags give no value. **Save** stores the `.h5`, the offset, the bands and the traces compared as the variable **Sensor** in the scored file; keep the `.h5` next to it. The bands are search ranges, not physiological limits, and a peak in the EMG is not a detected heartbeat.
+
+The code is in `VS3_sensorConvert.m`, `VS3_sensorTool.m` and `VS3_sensorView.m`.
+
+
 ## Photometry (dF/F)
 
 Fibre photometry recorded on an analog input (for example `ADC1` of an Open Ephys board, with the two LEDs modulated at 217 and 322 Hz) is stored in the file as the raw detector signal. On screen that trace looks flat: VeryScore3 downsamples every trace to 200 Hz for display, which removes the LED carriers. The photometry tool reads the channel from the file at its full sampling rate and turns it into dF/F.
@@ -275,19 +326,22 @@ Clicking in the figure shows that moment in the main window.
 
 ## Open Ephys recordings
 
-**File > Convert Open Ephys recording...** converts recordings of the Open Ephys GUI (binary format, versions 0.6 and 1.x) into VeryScore files. Select the folder of the session (every recording found below it is converted, whatever the folder layout, several Record Nodes included) and the folder for the converted files. Each recording becomes `<name>_<yymmdd>.mat` with:
+**File > Convert Open Ephys recording...** converts recordings of the Open Ephys GUI (binary format, versions 0.6 and 1.x) into VeryScore files. Select the folder of the session (every recording found below it is converted, whatever the folder layout, several Record Nodes included; a Record Node, experiment, recording, `continuous` or stream folder works too) and the folder for the converted files. When there are several recordings you choose which ones in a list, then the channels to convert (all are selected; memory monitoring is never converted). When some recordings are already converted in the target folder you are asked whether to skip them or convert them again. Each recording becomes `<name>_<yymmdd>.mat` with:
 
-- `traces`: every channel raw, in volts (headstage channels and ADC inputs, for example a photometry detector), nothing filtered or rescaled; `traceName`: the channel names
+- `traces`: the chosen channels raw, in volts (headstage channels and ADC inputs, for example a photometry detector), nothing filtered or rescaled; `traceName`: their names; `Infos.ConvertedChannels`: their numbers in the recording
 - `Infos`: sampling rate, channel names and units, the exact time of the first sample (`Infos.StartTime`, clock of the recording PC, used to align a thermal video), dropped samples, Open Ephys version, machine, ...
 - `Events` and `Messages` when TTL events or messages were recorded
 
-When one recording was converted, you can open it right away. An 8-h recording with 5 channels takes about 20 s. From the command line: `VS3_convertOpenEphys(sessionFolder, targetFolder)` (options `'unit'` `'V'` / `'uV'`, `'overwrite'`). The `.npy` files of the recording are read by VeryScore3 itself (no npy-matlab needed).
+When one recording was converted, you can open it right away. An 8-h recording with 5 channels takes about 20 s. From the command line: `VS3_convertOpenEphys(sessionFolder, targetFolder)` (options `'unit'` `'V'` / `'uV'`, `'overwrite'`, `'channels'` names or numbers).
+
+The channels of the Open Ephys acquisition board each have their own DC level: in files converted from it (`Infos.Stream` = `acquisition_board`) every trace is centred in its slot on screen. The values, filters and exported traces are not changed. Older converted files whose `Infos.Channel` lists the whole recording while only some channels were kept are named from `traceName`. The `.npy` files of the recording are read by VeryScore3 itself (no npy-matlab needed).
 
 
 ## Credits
 
 - **VeryScore2** (2018-2021): Romain Cardis and Anita Lüthi, Lüthi lab, Department of Fundamental Neurosciences, University of Lausanne, with updates by Georgios Foustoukos (2023-2024). VeryScore1's autoscoring is kept as the classic auto-scoring.
-- **VeryScore3** (2026): Alejandro Osorio-Forero (Netherlands Institute for Neuroscience), written with Claude (Anthropic): auto-scoring, thermal video, photometry, unification.
+- **VeryScore3** (2026): Alejandro Osorio-Forero (Netherlands Institute for Neuroscience), written with Claude (Anthropic): auto-scoring, thermal video, photometry, unification, the video column.
+- **Wenjie** (October 2026, with Codex): sensor comparison, Pi camera timestamps, direct reading of the `.ravi`, recorder timing maps, ROI tracking and the Open Ephys channel choice, first written as a separate review program and brought into the main window of VeryScore3.
 - The logo (`images/`, drawn by `images/VS3_makeLogo.py`) appears on the start screen, in the progress windows, in Help > About and in the summary figure.
 - If you use VeryScore in published work, please cite the Lüthi lab as described in the README and CITATION.cff at the root of this repository.
 

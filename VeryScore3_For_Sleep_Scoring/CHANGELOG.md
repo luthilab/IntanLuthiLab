@@ -1,5 +1,40 @@
 # Changelog
 
+## VeryScore3 3.1 (2026-10-30)
+
+The additions of Wenjie (October 2026, written with Codex as a separate "synchronized review" program,
+`VS3_review`) brought into the main window of VeryScore3 instead (Alejandro Osorio-Forero, with Claude).
+The separate program is not part of VeryScore3; its video, timing and sensor functions are.
+
+- Tools > Video (`VS3_videoPanel`, `VS3_video`): the Raspberry Pi camera and the thermal video in a column
+  right of the traces, shown when a video is opened and gone when the last one is closed. The frame at the
+  start of the epoch follows every move of the main window; Play 4 s (or the space bar) plays the epoch with
+  a line running over the traces. Views: Pi camera, thermal, one above the other, or the thermal image over
+  the camera (warm parts opaque, opacity slider), aligned with points clicked in both videos.
+  - Pi frames found by the times of their `.timestamps.csv` (variable frame rate stays exact), the
+    `.ravi` read directly (hardware frame counter, start time, shutter frames), or the `.h5` of the thermal tool.
+  - Offsets as for the temperature (video time at EEG sample 1), from the start times of the recordings
+    (Pi: UTC of its first frame against `Infos.StartTimePosix`), the temperature analysis, or typed.
+  - Load recorder timing folder (`VS3_videoTiming`): per-frame clock maps of the recorder (camera clock
+    observations, EEG sample of every thermal frame) instead of the offset; unmapped frames are not shown.
+  - ROIs on either video: movement (dx, dy, tracked by correlation) and brightness, or thermal mean, for
+    every frame of the epoch, drawn under the videos with the spectrum of one of them. MATLAB only.
+  - Save stores the videos, offsets, view, alignment and ROIs as `Video`; they are reopened at loading.
+  - `VS3_main(file, 'pi', video, 'thermal', video)` opens a file and its videos from a script.
+- Tools > Sensor data and File > Sensor CSV files to one H5 (`VS3_sensorConvert`, `VS3_sensorTool`,
+  `VS3_sensorView`, by Wenjie): the Pi sensor compared with the EEG / EMG traces as displayed, respiration and
+  heart candidates of every 4-s epoch over the recording and the epoch in detail, following the main window;
+  stored as `Sensor`.
+- File > Convert Open Ephys recording: any folder of a recording (down to the stream folder) finds it; lists
+  to choose the recordings and the channels; recordings already converted are skipped or converted again on
+  request; option `'channels'`; `Infos.ConvertedChannels`.
+- Open Ephys acquisition board files: every trace centred in its slot on screen (display only). Files whose
+  `Infos.Channel` lists more channels than they hold are named from `traceName`.
+- File > Import and the video, sensor and timing dialogs start in the folder used last for that kind of
+  file (`VS3_fileHistory`).
+- Tests in `tests/` (synthetic data): `test_video` (Pi video, .h5, .ravi, column, playback, ROI, recorder
+  timing maps), `test_openEphys`, `test_sensor` (by Wenjie).
+
 ## VeryScore3 3.0 (2026-10)
 
 VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every file renamed `VS3_*`
@@ -14,6 +49,10 @@ VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every 
   and photometry of the whole recording; on the right the clock times, a ring of the time in each state, box
   plots of the bout durations and the states hour by hour; clicking navigates the main window.
   Saved as .fig (the panels stay zoomed together when it is opened again, without VeryScore3) and .png.
+- File > Export displayed traces (.mat): the traces as displayed (filters, notches, bipolar, photometry dF/F; order
+  of the screen, suppressed traces left out) saved in a new file at 200 Hz, in the units of the recording (display
+  gain and loading scaling undone, dF/F in %), with the channel names (asked), `Infos.Fs`, `Infos.StartTime` and
+  what was done to each trace (`traceProcessing`). The scored file is never overwritten.
 - The VeryScore3 logo (`images/`, `VS3_logo`): start screen of the main window, progress windows of every tool,
   Help > About VeryScore3 (credits and repositories), summary figure.
 - Photometry display: the dF/F is scaled from its typical spread within one minute (five times taller than in
@@ -33,6 +72,7 @@ VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every 
   - Reverse all changes dropped the transitions placed by hand, so the next Save wrote NaN into `bTrans`; it
     also showed a hidden temperature panel again.
   - Clicking the hypnogram left of 4 s or after the last epoch gave an error, and a click went one epoch too early.
+  - Closing the Filter traces or Notch dialog without choosing gave an error.
 - Thermal video (after a review of v1.6/1.8):
   - Parallel workers re-open the video when it changed (calibration added, converted again); before, they could
     return the old uncalibrated values labelled degC.
