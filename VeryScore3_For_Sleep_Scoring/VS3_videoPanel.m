@@ -29,6 +29,7 @@ classdef VS3_videoPanel < handle
         roiOn = true            % measure the ROIs at every epoch
         blind = false           % blind scoring (Import randomly): no file names
         keyFunction = []        % key presses in the column go to the main window (scoring keys)
+        warmSpot = []           % the animal in the thermal video (VS3_videoMotion 'warmSpot'), kept for this video
     end
 
     properties (SetAccess = private)
@@ -122,6 +123,7 @@ classdef VS3_videoPanel < handle
                 self.rois(strcmp({self.rois.video}, kind)) = [];
                 if strcmp(kind, 'thermal'); self.overlay = []; end
             end
+            if strcmp(kind, 'thermal'); self.warmSpot = []; end
             if ~isempty(self.pi) && ~isempty(self.thermal) && ~isempty(V)
                 self.mode = 'both';
             end
@@ -554,23 +556,33 @@ classdef VS3_videoPanel < handle
         end
 
         %% Thermal over Pi camera
-        function ok = alignOverlay(self)
+        function [ok, res] = alignOverlay(self, xyPi, xyThermal)
             % alignOverlay  Click the same points on the Pi camera and on the thermal video (at least
-            % 3, Enter to finish): affine transform thermal -> Pi by least squares.
+            % 3, Enter to finish): affine transform thermal -> Pi by least squares. From a script:
+            % alignOverlay(xyPi, xyThermal), the points as rows [x y] in pixels of each video;
+            % res = remaining error (root mean square, pixels of the Pi camera).
             ok = false;
+            res = NaN;
             if isempty(self.pi) || isempty(self.thermal); return; end
-            self.setMode('both')
-            title(self.axPi, 'Click at least 3 points that you can find in both videos, then Enter', ...
-                'Color', [.8 .2 .2], 'FontSize', 8, 'Visible', 'on')
-            [xp, yp] = clicks(self.axPi, Inf);
-            hp = line(self.axPi, xp, yp, 'LineStyle', 'none', 'Marker', '+', 'Color', 'c', 'MarkerSize', 10);
-            n = numel(xp);
-            if n < 3; delete(hp); self.refresh(); return; end
-            title(self.axTh, sprintf('Click the same %d points, in the same order', n), ...
-                'Color', [.8 .2 .2], 'FontSize', 8, 'Visible', 'on')
-            [xt, yt] = clicks(self.axTh, n);
-            delete(hp)
-            if numel(xt) < n; self.refresh(); return; end
+            if nargin < 3
+                self.setMode('both')
+                title(self.axPi, 'Click at least 3 points that you can find in both videos, then Enter', ...
+                    'Color', [.8 .2 .2], 'FontSize', 8, 'Visible', 'on')
+                [xp, yp] = clicks(self.axPi, Inf);
+                hp = line(self.axPi, xp, yp, 'LineStyle', 'none', 'Marker', '+', 'Color', 'c', 'MarkerSize', 10);
+                n = numel(xp);
+                if n < 3; delete(hp); self.refresh(); return; end
+                title(self.axTh, sprintf('Click the same %d points, in the same order', n), ...
+                    'Color', [.8 .2 .2], 'FontSize', 8, 'Visible', 'on')
+                [xt, yt] = clicks(self.axTh, n);
+                delete(hp)
+                if numel(xt) < n; self.refresh(); return; end
+            else
+                xp = xyPi(:, 1); yp = xyPi(:, 2);
+                xt = xyThermal(:, 1); yt = xyThermal(:, 2);
+                n = numel(xp);
+                if n < 3 || numel(xt) ~= n; error('VS3_videoPanel:align', 'Give at least 3 pairs of points.'); end
+            end
             A = [xt(:), yt(:), ones(n, 1)];
             P = A \ [xp(:), yp(:)];          % 3 x 2: [x y 1]*P = Pi pixel
             T = [P'; 0 0 1];
@@ -579,7 +591,7 @@ classdef VS3_videoPanel < handle
             self.mode = 'overlap';
             self.refresh()
             ok = true;
-            if n > 3
+            if n > 3 && nargin < 3
                 msgbox(sprintf('Thermal video aligned on the Pi camera (%d points, residual %.1f pixels of the Pi camera).', ...
                     n, res), 'Thermal over Pi')
             end

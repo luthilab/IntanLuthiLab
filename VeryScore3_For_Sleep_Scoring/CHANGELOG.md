@@ -17,6 +17,13 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
     (Pi: UTC of its first frame against `Infos.StartTimePosix`), the temperature analysis, or typed.
   - Load recorder timing folder (`VS3_videoTiming`): per-frame clock maps of the recorder (camera clock
     observations, EEG sample of every thermal frame) instead of the offset; unmapped frames are not shown.
+  - Estimate Pi offset from the movement and Align thermal on Pi from the movement (`VS3_videoMotion`): the
+    animal starting to walk in both videos gives the delay of the Pi video; its places in both videos while
+    it walks give the place, scale and rotation thermal -> Pi (RANSAC). On the overnight recording of
+    2026-10-28 the Pi video was 2 s late on its start time, and the thermal image had to be enlarged 3.6
+    times and turned by 180 degrees.
+  - Thermal frames of the `.ravi` timed from the camera counter of one frame in about 1400 (opening in under
+    1 s on a network drive instead of 1.5 min); the shutter state of a frame is read with the frame.
   - ROIs on either video: movement (dx, dy, tracked by correlation) and brightness, or thermal mean, for
     every frame of the epoch, drawn under the videos with the spectrum of one of them. MATLAB only.
   - Save stores the videos, offsets, view, alignment and ROIs as `Video`; they are reopened at loading.
@@ -33,7 +40,9 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
 - File > Import and the video, sensor and timing dialogs start in the folder used last for that kind of
   file (`VS3_fileHistory`).
 - Tests in `tests/` (synthetic data): `test_video` (Pi video, .h5, .ravi, column, playback, ROI, recorder
-  timing maps), `test_openEphys`, `test_sensor` (by Wenjie).
+  timing maps), `test_videoMotion` (a walking animal in both videos, known delay and transform),
+  `test_openEphys`, `test_sensor` (by Wenjie). Checked on the overnight recording of 2026-10-28.
+  `alignOverlay(xyPi, xyThermal)` aligns from a script.
 
 ## VeryScore3 3.0 (2026-10)
 

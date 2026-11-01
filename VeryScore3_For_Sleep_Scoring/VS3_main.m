@@ -138,6 +138,8 @@ h.toolsMenu_videoThermal.Callback = @(~,~) videoOpen('thermal');
 set([h.toolsMenu_videoShowPi, h.toolsMenu_videoShowThermal, h.toolsMenu_videoShowBoth, h.toolsMenu_videoShowOverlap], ...
     'Callback', @videoShow);
 h.toolsMenu_videoAlign.Callback = @videoAlign;
+h.toolsMenu_videoAutoAlign.Callback = @videoAutoAlign;
+h.toolsMenu_videoLag.Callback = @videoLag;
 h.toolsMenu_videoOffset.Callback = @videoOffsets;
 h.toolsMenu_videoTiming.Callback = @videoTiming;
 h.toolsMenu_videoTimingClear.Callback = @videoTimingClear;
@@ -935,7 +937,7 @@ end
         hasPi = has && ~isempty(h.video.pi);
         hasTh = has && ~isempty(h.video.thermal);
         h.toolsMenu_videoShow.Enable = onoff{(hasPi && hasTh)+1};
-        h.toolsMenu_videoAlign.Enable = onoff{(hasPi && hasTh)+1};
+        set([h.toolsMenu_videoAlign, h.toolsMenu_videoAutoAlign, h.toolsMenu_videoLag], 'Enable', onoff{(hasPi && hasTh)+1})
         set([h.toolsMenu_videoOffset, h.toolsMenu_videoTiming, h.toolsMenu_videoRoiAdd], 'Enable', onoff{(hasPi || hasTh)+1})
         timed = (hasPi && ~isempty(h.video.pi.timeMap)) || (hasTh && ~isempty(h.video.thermal.timeMap));
         h.toolsMenu_videoTimingClear.Enable = onoff{timed+1};
@@ -1137,6 +1139,95 @@ end
         if isempty(h.video) || ~isvalid(h.video); return; end
         h.video.alignOverlay();
         videoMenus()
+    end
+
+    function videoLag(~,~)
+        % the movements of the animal in the Pi video against the thermal video: delay of the Pi video
+        if isempty(h.video) || ~isvalid(h.video) || isempty(h.video.pi) || isempty(h.video.thermal); return; end
+        P = h.video.pi;
+        [W, w, ok] = videoWarmSpot('Pi offset from the movement');
+        if ~ok; return; end
+        try
+            [lag, R] = VS3_videoMotion('piLag', P, h.video.thermal, W, @(f, txt) videoProgress(w, 0.4 + 0.6*f, txt));
+        catch err
+            if isvalid(w); delete(w); end
+            if ~strcmp(err.identifier, 'VS3_videoMotion:cancelled'); errordlg(err.message, 'Pi offset from the movement'); end
+            return
+        end
+        if isvalid(w); delete(w); end
+        ref = 'its start time';
+        if ~isempty(h.video.thermal.timeMap); ref = 'the recorder timing'; end
+        found = sprintf('%d movement onsets found (after 5 s at rest), %d clear and agreeing', numel(R.onsets), sum(R.used));
+        if isnan(lag)
+            msgbox(sprintf(['No estimate: %s (correlation > 0.5); at least 3 are needed. The Pi offset is kept ', ...
+                '(%.3f s).'], found, P.offset), 'Pi offset from the movement')
+            return
+        end
+        an = questdlg(sprintf(['The movements of the animal appear %+.1f s later in the Pi video than in the thermal ', ...
+            'video (aligned by %s): %s, delays %s s, correlation %.2f to %.2f.\n\nCorrect the Pi offset by %+.1f s ', ...
+            '(%.3f -> %.3f s)?'], lag, ref, found, strjoin(compose('%+.1f', R.lags(R.used)), ', '), ...
+            min(R.r(R.used)), max(R.r(R.used)), lag, P.offset, P.offset + lag), 'Pi offset from the movement', ...
+            'Correct it', 'Keep it', 'Correct it');
+        if ~strcmp(an, 'Correct it'); return; end
+        P.offset = P.offset + lag;
+        P.offsetSource = sprintf('%s, %+.1f s from the movement', regexprep(P.offsetSource, ', [+-][\d.]+ s from the movement$', ''), lag);
+        h.video.refresh()
+    end
+
+    function videoAutoAlign(~,~)
+        % thermal -> Pi transform from the places of the moving animal in both videos
+        if isempty(h.video) || ~isvalid(h.video) || isempty(h.video.pi) || isempty(h.video.thermal); return; end
+        [W, w, ok] = videoWarmSpot('Align thermal on Pi');
+        if ~ok; return; end
+        try
+            [T, R] = VS3_videoMotion('align', h.video.pi, h.video.thermal, W, @(f, txt) videoProgress(w, 0.4 + 0.6*f, txt));
+        catch err
+            if isvalid(w); delete(w); end
+            if ~strcmp(err.identifier, 'VS3_videoMotion:cancelled'); errordlg(err.message, 'Align thermal on Pi'); end
+            return
+        end
+        if isvalid(w); delete(w); end
+        txt = sprintf(['Fitted on the moments where the animal moved: %d of %d agree within 3 %% of the image; remaining ', ...
+            'error %.0f pixels of the Pi camera. The thermal image is scaled %.2f times and turned by %.0f degrees.'], ...
+            R.nAgree, R.nPairs, R.rms, R.scale, R.rotation);
+        if isempty(regexp(h.video.pi.offsetSource, 'from the movement', 'once'))
+            txt = sprintf(['%s\n\nThe Pi offset was not checked on the movement (Estimate Pi offset from the movement): ', ...
+                'a wrong offset pairs the wrong moments.'], txt);
+        end
+        an = questdlg(sprintf('%s\n\nShow the thermal video over the Pi camera with this alignment?', txt), ...
+            'Align thermal on Pi', 'Use it', 'Cancel', 'Use it');
+        if ~strcmp(an, 'Use it'); return; end
+        h.video.overlay = T; % place, scale and rotation fitted on the pairs that agree
+        h.video.setMode('overlap')
+        videoMenus()
+    end
+
+    function [W, w, ok] = videoWarmSpot(ttl)
+        % the animal in the thermal video, once per video (about 5 min for 5 h on a network drive)
+        ok = false;
+        W = [];
+        w = VS3_logo('waitbar', 0, 'Finding the animal in the thermal video...', 'Name', ttl, ...
+            'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+        setappdata(w, 'canceling', 0);
+        if isempty(h.video.warmSpot)
+            try
+                h.video.warmSpot = VS3_videoMotion('warmSpot', h.video.thermal, 2, @(f, txt) videoProgress(w, 0.4*f, txt));
+            catch err
+                if isvalid(w); delete(w); end
+                if ~strcmp(err.identifier, 'VS3_videoMotion:cancelled'); errordlg(err.message, ttl); end
+                return
+            end
+        end
+        W = h.video.warmSpot;
+        ok = true;
+    end
+
+    function goOn = videoProgress(w, f, txt)
+        % progress bar of the movement tools; false when Cancel was pressed or the window closed
+        goOn = isvalid(w) && ~isequal(getappdata(w, 'canceling'), 1);
+        if goOn
+            waitbar(min(max(f, 0), 1), w, txt)
+        end
     end
 
     function videoOffsets(~,~)

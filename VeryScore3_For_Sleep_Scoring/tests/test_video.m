@@ -73,6 +73,10 @@ fig = openMain(t, 'pi', t.TestData.pi, 'thermal', t.TestData.h5);
 P = getappdata(findobj(fig, 'Tag', 'VS3video'), 'VS3_videoPanel');
 verifyEqual(t, P.pi.offset, 10, 'AbsTol', 1e-6);      % UTC of the first frame
 verifyEqual(t, P.thermal.offset, 5, 'AbsTol', 1e-6);  % start time of the camera, clock of the PC
+for txt = {'Estimate Pi offset from the movement...', 'Align thermal on Pi from the movement...', 'Align thermal on Pi camera...'}
+    m = findobj(fig, 'Type', 'uimenu', 'Text', txt{1});
+    verifyEqual(t, char(m.Enable), 'on', txt{1});   % both videos open
+end
 end
 
 %% ======================================================================= the column of the main window
@@ -134,11 +138,15 @@ end
 function testOverlayAlignmentTransform(t)
 fig = openMain(t, 'pi', t.TestData.pi, 'thermal', t.TestData.h5);
 P = getappdata(findobj(fig, 'Tag', 'VS3video'), 'VS3_videoPanel');
-P.overlay = [2 0 10; 0 2 20; 0 0 1];
-P.setMode('overlap')
+xyT = [1 1; 64 1; 1 48; 30 20];          % points of the thermal video and where they are on the Pi camera
+[ok, res] = P.alignOverlay(xyT*2 + [10 20], xyT);
+verifyTrue(t, ok);
+verifyEqual(t, res, 0, 'AbsTol', 1e-9);
+verifyEqual(t, P.overlay, [2 0 10; 0 2 20; 0 0 1], 'AbsTol', 1e-9);
+verifyEqual(t, P.shownMode(), 'overlap');
 s = findobj(fig, 'Type', 'surface');
-verifyEqual(t, s.XData(1, :), [2*.5+10, 2*64.5+10]);
-verifyEqual(t, s.YData(:, 1)', [2*.5+20, 2*48.5+20]);
+verifyEqual(t, s.XData(1, :), [2*.5+10, 2*64.5+10], 'AbsTol', 1e-9);
+verifyEqual(t, s.YData(:, 1)', [2*.5+20, 2*48.5+20], 'AbsTol', 1e-9);
 S = P.settings();
 verifyEqual(t, S.overlay, P.overlay);
 verifyEqual(t, S.piOffset, 10, 'AbsTol', 1e-6);
