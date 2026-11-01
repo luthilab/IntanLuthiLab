@@ -20,8 +20,8 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
   - Estimate Pi offset from the movement and Align thermal on Pi from the movement (`VS3_videoMotion`): the
     animal starting to walk in both videos gives the delay of the Pi video; its places in both videos while
     it walks give the place, scale and rotation thermal -> Pi (RANSAC). On the overnight recording of
-    2026-10-28 the Pi video was 2 s late on its start time, and the thermal image had to be enlarged 3.6
-    times and turned by 180 degrees.
+    2026-10-28 the Pi video was 2 s late on its start time, and the thermal image had to be enlarged about
+    3.5 times and turned by 180 degrees.
   - Thermal frames of the `.ravi` timed from the camera counter of one frame in about 1400 (opening in under
     1 s on a network drive instead of 1.5 min); the shutter state of a frame is read with the frame.
   - ROIs on either video: movement (dx, dy, tracked by correlation) and brightness, or thermal mean, for
@@ -39,6 +39,12 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
   `Infos.Channel` lists more channels than they hold are named from `traceName`.
 - File > Import and the video, sensor and timing dialogs start in the folder used last for that kind of
   file (`VS3_fileHistory`).
+- Tools > Reload Names from Infos shows the names typed in `Infos.Channel` (File > Edit file Infos) also
+  for files converted from Open Ephys: their recorded names (`traceName`) won before, so the names typed
+  were never shown. File > Edit file Infos > New: Cancel no longer gives an error.
+- Sensor comparison: cancelling the calculation of the trends showed an error instead of the partial trends.
+- `tutorial/README.md`: VeryScore3 step by step for students and new users, with figures of a real
+  recording, and a video tour (`VS3_tour.mp4`, in the releases of the repository) filmed in the program.
 - Tests in `tests/` (synthetic data): `test_video` (Pi video, .h5, .ravi, column, playback, ROI, recorder
   timing maps), `test_videoMotion` (a walking animal in both videos, known delay and transform),
   `test_openEphys`, `test_sensor` (by Wenjie). Checked on the overnight recording of 2026-10-28.

@@ -15,6 +15,8 @@ VeryScore3 is the continuation of **VeryScore2**, written by Romain Cardis and A
 - **Summary figure**: hypnogram, EEG sigma activity, temperature and photometry of the whole recording
 - Everything in one program, `VS3_main`. See CHANGELOG.md for the full list.
 
+**New to VeryScore3?** Start with the **[tutorial](tutorial/README.md)**, step by step with figures, and the **[video tour](https://github.com/aosorioforero/VeryScore3/releases/download/tutorial-video/VS3_tour.mp4)**: from an Open Ephys recording to a scored file with the videos of the animal next to the traces. This README describes every menu.
+
 _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it with all of us._
 
 
@@ -257,7 +259,7 @@ When the animal was filmed during the EEG recording, the videos can be watched n
 
 **Align thermal on Pi camera...:** click at least 3 points that you can find in both videos (corners of the cage, the head...) on the camera, Enter, then the same points in the same order on the thermal video: the thermal image is moved, scaled and turned onto the camera (with more than 3 points the remaining error is reported). Until then it is simply fitted into the camera image.
 
-**Align thermal on Pi from the movement...:** the same without clicking, when the two cameras show the cage too differently to find common points. At moments when the animal walks, its place in the thermal video (the warm spot) and in the Pi video (where the image changes) are pairs of points; the place, scale and rotation that most pairs agree with are fitted (the others, a moving shadow or an exposure change, are left out) and you are shown how many agree and the remaining error before it is used. A wrong Pi offset pairs the wrong moments: estimate it first (below). On the overnight recording of 28-29 October 2026: 41 of 160 moments agreed, the thermal image 3.6 times larger and turned by 180 degrees, the warm spot on the mouse in its nest (remaining error about 40 pixels of the 1920-pixel Pi image).
+**Align thermal on Pi from the movement...:** the same without clicking, when the two cameras show the cage too differently to find common points. At moments when the animal walks, its place in the thermal video (the warm spot) and in the Pi video (where the image changes) are pairs of points; the place, scale and rotation that most pairs agree with are fitted (the others, a moving shadow or an exposure change, are left out) and you are shown how many agree and the remaining error before it is used. A wrong Pi offset pairs the wrong moments: estimate it first (below). On the overnight recording of 28-29 October 2026: about 40 of 160 moments agreed, the thermal image about 3.5 times larger and turned by 180 degrees, the warm spot on the mouse in its nest (remaining error about 40 pixels of the 1920-pixel Pi image).
 
 **Play 4 s** (button of the column, or the **space bar**): plays the 4 s of the epoch at the real speed (or 0.5x, 0.25x, 2x), with a black line running over the traces at the time of the frame. The scoring keys keep working after a click in the column.
 

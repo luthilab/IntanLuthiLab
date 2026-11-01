@@ -270,22 +270,26 @@ end
     end
     
     function reloadNames(~,~)
+        % the names typed in Infos.Channel (File > Edit file Infos), as at import: traceName (the
+        % recorded names of a converted file) only when Infos.Channel does not name every trace.
+        % traceName used to win, so names typed for a converted file were never shown
         varInfo = who(h.file);
+        names = {};
         if ismember('Infos',varInfo)
             Infos = h.file.Infos;
             if isfield(Infos,'Channel')
                 chanames = Infos.Channel;
-                h.Channel = strsplit(chanames(~isspace(chanames)),',');
-                h.bigplot.ChannelNames = h.Channel;
-                h.bigplot.initiateNames()
+                names = strsplit(chanames(~isspace(chanames)),',');
             end
         end
-        if ismember('traceName',varInfo)
-            chanames = h.file.traceName;
-            h.Channel = chanames;
-            h.bigplot.ChannelNames = h.Channel;
-            h.bigplot.initiateNames()
+        if numel(names) ~= size(h.bigplot.oriTraces,1) && ismember('traceName',varInfo)
+            names = cellstr(h.file.traceName);
+            names = names(:)';
         end
+        if isempty(names); return; end
+        h.Channel = names;
+        h.bigplot.ChannelNames = h.Channel;
+        h.bigplot.initiateNames()
     end
 
     function editInfos(~,~)
@@ -325,7 +329,8 @@ end
                     Infos = struct;
                 end
                 an = inputdlg({'New field name', 'Field content'}, 'Edit Infos', [1,40]);
-                Infos.(char(an{1})) = an{2};
+                if isempty(an) || ~isvarname(strtrim(an{1})); return; end % cancelled, or not a field name
+                Infos.(strtrim(an{1})) = an{2};
                 h.file.Infos = Infos;
         end
     end

@@ -323,7 +323,9 @@ classdef VS3_sensorView < handle
                 'Sensor and selected channels share the EEG time axis. Gaps / flagged sensor windows remain empty.\n' ...
                 'Click a curve to inspect that epoch. Use the data cursor for frequency and amplitude. x marks possible respiratory harmonics.\n' ...
                 'Main-window filters apply to recorded channels. Refresh trends after changing filters or channels. Candidates are not confirmed beats.']);
-            if T.cancelled; self.status.String=[self.status.String newline 'Calculation cancelled: partial trends shown. Refresh to finish.']; end
+            if T.cancelled % (the String of the multi-line box comes back as a block of rows: one row more, not a longer row)
+                self.status.String=[cellstr(self.status.String); {'Calculation cancelled: partial trends shown. Refresh to finish.'}];
+            end
         end
 
         function trendTip(self,curve,frequency,amplitude,unit)

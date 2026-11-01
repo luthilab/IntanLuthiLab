@@ -106,6 +106,30 @@ for k = 1:2
 end
 end
 
+function testReloadNamesOfAConvertedFile(t)
+% names typed in Infos.Channel (File > Edit file Infos) win over the recorded names (traceName) at
+% Tools > Reload Names from Infos; traceName again when Infos.Channel does not name every trace
+file = fullfile(t.TestData.folder, 'named.mat');
+traces = randn(2, 48000)*1e-4;
+Infos = struct('Fs', 1000, 'Channel', 'CH6, CH7', 'Unit', 'V');
+traceName = {'CH6', 'CH7'};
+save(file, 'traces', 'Infos', 'traceName', '-v7.3');
+before = findall(groot, 'Type', 'figure');
+VS3_main(file);
+fig = setdiff(findall(groot, 'Type', 'figure'), before);
+c = onCleanup(@() delete(fig));
+reload = findall(fig, 'Type', 'uimenu', 'Text', 'Reload Names from Infos');
+m = matfile(file, 'Writable', true);
+I = m.Infos; I.Channel = 'EMG, EEG'; m.Infos = I;
+reload.Callback(reload, []);
+txt = findobj(fig, 'Type', 'text');
+verifyTrue(t, all(ismember({'EMG', 'EEG'}, {txt.String})));
+I.Channel = 'EMG, EEG, EEG2'; m.Infos = I;
+reload.Callback(reload, []);
+txt = findobj(fig, 'Type', 'text');
+verifyTrue(t, all(ismember({'CH6', 'CH7'}, {txt.String})));
+end
+
 %% ======================================================================= helpers
 function writeText(p, txt)
 fid = fopen(p, 'w');

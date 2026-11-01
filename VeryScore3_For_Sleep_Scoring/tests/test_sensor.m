@@ -290,6 +290,21 @@ verifyTrue(t,T.cancelled);
 verifyTrue(t,all(isnan(T.recordedFrequency(2:end,:,:)),'all'));
 end
 
+function testCancelledTrendsAreShown(t)
+% cancelled trends: the partial trends and a note in the status box, not an error (the note used to be
+% appended to the rows of the box as one longer row)
+[file,~]=fixture(t,'cancel_view');
+target=fullfile(t.TestData.folder,'cancel_view.h5'); VS3_sensorConvert({file},target);
+S=VS3_sensorTool('read',target);
+config=struct('offset',0,'bands',[.5 5;5 15],'channels',1,'recordingEpochCount',3);
+V=VS3_sensorView(S,config,{'EMG'},@timelineEmg,@(~) [],'off');
+cleanup=onCleanup(@() delete(V)); %#ok<NASGU>
+V.timeline=VS3_sensorTool('timeline',S,0,config.bands,1:3,@timelineEmg,1,@(k,~) k<2);
+verifyTrue(t,V.timeline.cancelled);
+V.drawTrends();
+verifyTrue(t,any(contains(cellstr(V.status.String),'Calculation cancelled')));
+end
+
 function [x,fs,unit]=timelineEmg(ch,~)
 fs=200; time=(0:799)'/fs;
 x=sin(2*pi*2*time)+.5*sin(2*pi*(5+2*ch)*time); unit='V';
