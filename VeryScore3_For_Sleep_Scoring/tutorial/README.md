@@ -4,7 +4,7 @@
 
 This tutorial takes you through VeryScore3 step by step. It starts with a raw Open Ephys recording and ends with a scored file, with the videos of the animal next to the traces. It is written for students and anyone who opens VeryScore3 for the first time. Every menu is explained in more detail in the [README](../README.md).
 
-**Watch the video tour first:** [VS3_tour.mp4](https://github.com/aosorioforero/VeryScore3/releases/download/tutorial-video/VS3_tour.mp4) (10 min 44 s, 1080p, 220 MB). It shows everything below in the real program, filmed on the recording of this tutorial. Chapters:
+**Watch the video tour first:** [VS3_tour.mp4](https://github.com/aosorioforero/VeryScore3/releases/download/tutorial-video/VS3_tour.mp4) (10 min 48 s, 1080p, 221 MB). It shows everything below in the real program, filmed on the recording of this tutorial. Chapters:
 
 | | | | |
 |---|---|---|---|
@@ -12,8 +12,8 @@ This tutorial takes you through VeryScore3 step by step. It starts with a raw Op
 | 0:59 | The main window | 5:52 | Put the videos on the EEG time |
 | 1:43 | Prepare the traces | 7:53 | ROIs: movement and breathing |
 | 2:52 | Score by hand | 8:44 | Sensor data |
-| 3:42 | Auto-scoring | 9:26 | Summary figure |
-| 4:26 | Save | 9:48 | More tools |
+| 3:42 | Auto-scoring | 9:30 | Summary figure |
+| 4:26 | Save | 9:52 | More tools |
 
 All figures come from the same real recording: one mouse, 29 October 2026, 08:00 to 13:00. It has two EEG and two EMG electrodes recorded with Open Ephys at 1 kHz, a Raspberry Pi camera above the cage, an Optris thermal camera, and the respiration / heart sensor of the Pi.
 
@@ -239,8 +239,9 @@ The ROIs are measured at every new epoch, which takes 1 to 2 s. Untick **Measure
 
 The Raspberry Pi can record a respiration / heart sensor at the same time as the EEG.
 
-1. **File > Sensor CSV files to one H5...**: select the CSV (or CSV.GZ) files of the recording, in order. They are put together in one `.h5`; this took about a minute for this recording. The CSV files are not changed.
-2. **Tools > Sensor data > Import sensor H5...**: select the `.h5` and the traces to compare it with (here the two EMG traces).
+**Tools > Sensor data > Import sensor CSV...**: select the `.csv` of the sensor (`.csv.gz` works too; a recording in several files: select them all, in order), then the traces to compare it with (here the two EMG traces).
+
+The first time, the CSV is read into an `.h5` next to the EEG file (`<name of the CSV>_sensor.h5`). For these 5 hours (1.3 GB) this took a little over a minute. The next times, and when the scored file is opened again, that `.h5` is used. The CSV is not changed.
 
 The comparison window opens on **Full recording**: for every 4-s epoch, the strongest peak of the sensor and of each trace in the respiration band (0.5–5 Hz) and the heart band (5–15 Hz). Click a point to see that epoch.
 

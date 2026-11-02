@@ -165,6 +165,44 @@ delete(main); % Comparison must close together with its parent.
 verifyFalse(t,isgraphics(view));
 end
 
+function testImportTakesTheCsv(t)
+% Tools > Sensor data > Import sensor CSV: the CSV is read into an H5 next to the EEG file, used again
+% at the next import; file and channel dialogs answered by functions put first on the path
+[file,~]=fixture(t,'importcsv');
+eeg=fullfile(t.TestData.folder,'eeg'); mkdir(eeg);
+recording=fullfile(eeg,'importcsv.mat');
+traces=zeros(2,48000);
+Infos=struct('Fs',1000,'Channel','EMG1, EMG2','Unit','V','StartTimePosix', ...
+    posixtime(datetime(2026,9,24,17,19,28,'TimeZone','UTC')));
+save(recording,'traces','Infos','-v7.3');
+dialogs=fullfile(t.TestData.folder,'dialogs'); mkdir(dialogs);
+[p,n,e]=fileparts(file);
+writeFunction(fullfile(dialogs,'uigetfile.m'),sprintf('function [f,p]=uigetfile(varargin)\nf=''%s''; p=''%s'';\nend',[n e],[p filesep]));
+writeFunction(fullfile(dialogs,'listdlg.m'),sprintf('function [s,ok]=listdlg(varargin)\ns=1; ok=true;\nend'));
+addpath(dialogs);
+unshadow=onCleanup(@() rmpath(dialogs)); %#ok<NASGU>
+VS3_main(recording);
+main=findall(groot,'Type','figure','Tag','VS3Main');
+assertEqual(t,numel(main),1);
+cleanup=onCleanup(@() delete(main)); %#ok<NASGU>
+menu=findall(main,'Type','uimenu','Text','Import sensor CSV...');
+menu.Callback(menu,[]);
+target=fullfile(eeg,'importcsv_sensor.h5');
+verifyTrue(t,isfile(target));
+state=mainState(main);
+verifyEqual(t,state.sensor.source,target);
+verifyEqual(t,numel(findall(groot,'Type','figure','Name','Sensor / EEG-EMG comparison')),1);
+made=getfield(dir(target),'datenum'); %#ok<GFLD>
+menu.Callback(menu,[]); % the same CSV again: its H5 is used, not made again
+verifyEqual(t,getfield(dir(target),'datenum'),made); %#ok<GFLD>
+verifyFalse(t,isfile(fullfile(eeg,'importcsv_sensor_2.h5')));
+verifyEqual(t,numel(findall(groot,'Type','figure','Name','Sensor / EEG-EMG comparison')),1);
+end
+
+function writeFunction(path,text)
+fid=fopen(path,'w'); fprintf(fid,'%s\n',text); fclose(fid);
+end
+
 function [x,fs,unit] = fakeEmg(~,ep)
 fs=1000; x=sin(2*pi*(8+ep-2)*(0:3999)'/fs); unit='V';
 end

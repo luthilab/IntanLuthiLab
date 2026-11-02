@@ -738,7 +738,7 @@ end
             catch err
                 h.sensor = [];
                 h.sensorData = [];
-                warning('VS3:sensor', 'The sensor H5 of this file is not available (import it again): %s', err.message)
+                warning('VS3:sensor', 'The sensor H5 of this file is not available (import the sensor CSV again): %s', err.message)
             end
         end
         sensorMenus()
@@ -1395,25 +1395,41 @@ end
         def = fullfile(p, regexprep(f{1}, '(?i)\.csv(\.gz)?', '.h5'));
         [out, folder] = uiputfile('*.h5', 'Save the sensor recording as', def);
         if isequal(out, 0); return; end
-        w = VS3_logo('waitbar', 0.3, 'Converting the sensor files...', 'Name', 'Sensor data');
+        w = VS3_logo('waitbar', 0, 'Converting the sensor files...', 'Name', 'Sensor data');
         try
-            VS3_sensorConvert(fullfile(p, f), fullfile(folder, out));
+            VS3_sensorConvert(fullfile(p, f), fullfile(folder, out), @(x) sensorProgress(x, w));
         catch err
             if isvalid(w); close(w); end
             errordlg(sprintf('The sensor files could not be converted:\n%s', err.message), 'Sensor data')
             return
         end
         if isvalid(w); close(w); end
-        msgbox(sprintf('Sensor recording saved in\n%s\n\nOpen the EEG, then Tools > Sensor data > Import sensor H5.', ...
+        msgbox(sprintf('Sensor recording saved in\n%s\n\nOpen the EEG, then Tools > Sensor data > Import sensor CSV.', ...
             fullfile(folder, out)), 'Sensor data')
     end
 
     function sensorImport(~,~)
-        [f, p] = uigetfile('*.h5', 'Select the sensor H5 of this recording', VS3_fileHistory('get', 'sensor', h.path));
+        % the CSV / CSV.GZ files of the Pi sensor (several: in chronological order), or an H5 made from
+        % them. The CSV files are read once into an H5 next to the EEG file, which is used again the next
+        % time (the CSV files are not changed)
+        [f, p] = uigetfile({'*.csv;*.csv.gz;*.h5', 'Pi sensor CSV / CSV.GZ (or its H5)'}, ...
+            'Select the sensor CSV of this recording (several: in chronological order)', ...
+            VS3_fileHistory('get', 'sensor', h.path), 'MultiSelect', 'on');
         if isequal(f, 0); return; end
-        VS3_fileHistory('remember', 'sensor', fullfile(p, f));
+        f = cellstr(f);
+        VS3_fileHistory('remember', 'sensor', fullfile(p, f{1}));
+        if any(endsWith(lower(f), '.h5'))
+            if numel(f) > 1
+                errordlg('Select the CSV files of the recording, or one H5.', 'Sensor data')
+                return
+            end
+            source = fullfile(p, f{1});
+        else
+            source = sensorH5(fullfile(p, f));
+            if isempty(source); return; end
+        end
         try
-            S = VS3_sensorTool('read', fullfile(p, f));
+            S = VS3_sensorTool('read', source);
             offset = VS3_sensorTool('offset', S.startPosix, h.file.Infos);
         catch err
             errordlg(err.message, 'Sensor data')
@@ -1434,6 +1450,56 @@ end
         sensorMenus()
         sensorShow()
         h.sensorView.showOverview();
+    end
+
+    function target = sensorH5(files)
+        % the H5 of these CSV files (VS3_sensorConvert): next to the EEG file, since the folder of the
+        % CSV can be read-only, named after the first CSV. An H5 already made from the same files (same
+        % paths and sizes) is used again; '' when cancelled or failed
+        [~, base] = fileparts(regexprep(files{1}, '(?i)\.csv(\.gz)?$', ''));
+        target = fullfile(h.path, [base '_sensor.h5']);
+        k = 1;
+        while isfile(target) && ~sensorH5Holds(target, files)
+            k = k + 1;
+            target = fullfile(h.path, sprintf('%s_sensor_%d.h5', base, k));
+        end
+        if isfile(target); return; end
+        probe = tempname(h.path);
+        if mkdir(probe)
+            rmdir(probe)
+        else % the folder of the EEG file is read-only
+            [out, folder] = uiputfile('*.h5', 'Save the sensor recording (H5) as', [base '_sensor.h5']);
+            if isequal(out, 0); target = ''; return; end
+            target = fullfile(folder, out);
+            if isfile(target) && sensorH5Holds(target, files); return; end
+        end
+        bytes = sum(cellfun(@(x) getfield(dir(x), 'bytes'), files)); %#ok<GFLD>
+        w = VS3_logo('waitbar', 0, sprintf('Reading the sensor CSV (%.1f GB)...', bytes/1e9), 'Name', 'Sensor data');
+        try
+            VS3_sensorConvert(files, target, @(x) sensorProgress(x, w));
+        catch err
+            if isvalid(w); close(w); end
+            errordlg(sprintf('The sensor CSV could not be read:\n%s', err.message), 'Sensor data')
+            target = '';
+            return
+        end
+        if isvalid(w); close(w); end
+    end
+
+    function sensorProgress(x, w)
+        % the part of the CSV read (VS3_sensorConvert), on the progress window while it is open
+        if isvalid(w); waitbar(x, w); end
+    end
+
+    function same = sensorH5Holds(target, files)
+        % the H5 was made from these files (same paths, order and sizes)
+        same = false;
+        try
+            sources = jsondecode(h5readatt(target, '/', 'sources_json'));
+            same = numel(sources) == numel(files) && all(arrayfun(@(k) strcmpi(sources(k).path, files{k}) ...
+                && sources(k).bytes == getfield(dir(files{k}), 'bytes'), 1:numel(files))); %#ok<GFLD>
+        catch
+        end
     end
 
     function [names, keys] = sensorChannelNames()

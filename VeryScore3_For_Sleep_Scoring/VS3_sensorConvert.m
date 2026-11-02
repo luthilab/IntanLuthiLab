@@ -1,10 +1,12 @@
-function target = VS3_sensorConvert(files, target)
+function target = VS3_sensorConvert(files, target, report)
 %VS3_SENSORCONVERT Explicitly selected Pi CSV/CSV.GZ files -> one lossless H5.
 % No folder recursion, source edits, deduplication, gap filling or overwriting.
 % VS3_sensorConvert({'recording_PWM.csv'}, 'recording_sensor.h5')
+% report (optional): @(fraction) called after each block of rows read (a progress bar).
 % Quality bits: 1 clipped, 2 step >800 ADC, 4 timing, 8 warmup, 16 demo.
 % UTC anchors come from CSV logging time; monotonic elapsed time preserves gaps.
 files = cellstr(files);
+if nargin < 3; report = []; end
 if isempty(files); error('VS3:sensorInput','Select at least one CSV file.'); end
 if isfile(target); error('VS3:sensorExists','Output already exists: %s',target); end
 if numel(unique(files)) ~= numel(files)
@@ -130,6 +132,7 @@ for source = 1:numel(files)
             h5write(partial,['/samples/' names{k}],values{k},n+1,numel(x));
         end
         n = n+numel(x); previousTime = time(end); previousRaw = x(end); previousElapsed = elapsed(end);
+        if ~isempty(report); report((source-1+progress(ds))/numel(files)); end
     end
     if isempty(anchor); error('VS3:sensorInput','No samples in %s.',input); end
     segmentBase = segmentBase+maxSegment+1;

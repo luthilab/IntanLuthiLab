@@ -31,7 +31,8 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
 - Tools > Sensor data and File > Sensor CSV files to one H5 (`VS3_sensorConvert`, `VS3_sensorTool`,
   `VS3_sensorView`, by Wenjie): the Pi sensor compared with the EEG / EMG traces as displayed, respiration and
   heart candidates of every 4-s epoch over the recording and the epoch in detail, following the main window;
-  stored as `Sensor`.
+  stored as `Sensor`. Tools > Sensor data > Import sensor CSV takes the CSV of the sensor: it is read once into
+  an `.h5` next to the EEG file, used again at the next import (an `.h5` used to be needed first).
 - File > Convert Open Ephys recording: any folder of a recording (down to the stream folder) finds it; lists
   to choose the recordings and the channels; recordings already converted are skipped or converted again on
   request; option `'channels'`; `Infos.ConvertedChannels`.

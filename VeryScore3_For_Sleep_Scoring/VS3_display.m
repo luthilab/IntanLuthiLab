@@ -75,7 +75,7 @@ h.toolsMenu_videoCloseThermal = uimenu(h.toolsMenu_video, 'Text', 'Close thermal
 
 %% Sensor submenu (Pi sensor compared with the EEG / EMG in 4-s epochs, see VS3_sensorView)
 h.toolsMenu_sensor = uimenu(h.toolsMenu, 'Text', 'Sensor data');
-h.toolsMenu_sensorImport = uimenu(h.toolsMenu_sensor, 'Text', 'Import sensor H5...');
+h.toolsMenu_sensorImport = uimenu(h.toolsMenu_sensor, 'Text', 'Import sensor CSV...');
 h.toolsMenu_sensorShow = uimenu(h.toolsMenu_sensor, 'Text', 'Show sensor / EMG comparison', 'Enable', 'off');
 h.toolsMenu_sensorSettings = uimenu(h.toolsMenu_sensor, 'Text', 'Alignment and candidate bands...', 'Enable', 'off');
 
