@@ -1,0 +1,13 @@
+Copy the calibration files of the camera that made the recording into this folder.
+
+For AH2_thermBL1.ravi (camera serial 25074068, 53 deg lens, range -20..100 C) the file needed is
+
+    Kennlinie-25074068-53-M20-100.prn
+
+(optionally also Cali-25074068-53-M20-100.dat and Cali-25074068.xml, used only by PIX Connect).
+
+Where to find them: on the PC that was connected to the camera, in
+    C:\Users\<user>\AppData\Roaming\Imager\Cali\
+or pull them from the camera with PIX Connect: Tools -> Extended -> Calibration data -> From device.
+
+Then run:   python python\add_calibration.py AH2_thermBL1.h5

@@ -1,0 +1,9 @@
+# your own auto-scoring library (Tools > Auto-Scoring > Add this scoring to the library)
+autoscore/*_local.mat
+# camera calibration files (Kennlinie) belong to one camera
+thermal/calibration/*
+!thermal/calibration/PUT_KENNLINIE_FILES_HERE.txt
+# python caches and MATLAB autosaves
+__pycache__/
+*.pyc
+*.asv
