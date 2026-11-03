@@ -226,7 +226,8 @@ end
     end
 
     function summaryFigure(~,~)
-        % hypnogram, EEG sigma activity, temperature and photometry of the whole recording (VS3_summary)
+        % hypnogram, EEG sigma activity, temperature, breathing, heart rate and photometry of the whole
+        % recording (VS3_summary)
         b = h.bigplot.giveMeB();
         names = autoScoreNames();
         d = autoScoreDefaults(names); % the EEG chosen for the auto-scoring, if any
@@ -244,13 +245,115 @@ end
             Infos = h.file.Infos;
             if isfield(Infos, 'StartTime'); st = Infos.StartTime; end
         end
+        [thermal, breathing, ok] = summaryVideo(numel(b));
+        if ~ok; return; end
         try
+            sensor = summarySensor(numel(b));
             VS3_summary('b', b, 'eeg', h.bigplot.oriTraces(sel, :), 'fs', 200, 'eegName', regexprep(names{sel}, '^\d+: ', ''), ...
-                'thermal', h.thermal, 'photometry', h.photometry, 'startTime', st, 'title', ttl, 'navigate', @goToEpoch, ...
-                'file', sfile);
+                'thermal', thermal, 'photometry', h.photometry, 'sensor', sensor, 'videoBreathing', breathing, ...
+                'startTime', st, 'title', ttl, 'navigate', @goToEpoch, 'file', sfile);
         catch err
             errordlg(sprintf('The summary could not be made:\n%s', err.message), 'Summary figure');
         end
+    end
+
+    function [thermal, breathing, ok] = summaryVideo(nEp)
+        % for the summary: the temperature of the animal (warm spot of the thermal video, when the file
+        % has no Thermal analysis) and the breathing seen by the Pi ROIs in one epoch per minute. What is
+        % not measured yet is offered first; the results are kept in the video column (saved with the
+        % file). ok is false when the summary is cancelled.
+        thermal = h.thermal;
+        breathing = [];
+        ok = true;
+        if isempty(h.video) || ~isvalid(h.video); return; end
+        P = h.video;
+        epochs = (8:15:nEp)';                   % the middle epoch of every minute
+        needT = isempty(thermal) && ~isempty(P.thermal);
+        items = {};
+        what = [];                              % 0: temperature, else the index of the Pi ROI
+        if needT && (isempty(P.warmSpot) || ~isfield(P.warmSpot, 'value'))
+            items{end+1} = sprintf('Temperature: warmest spot of the thermal video (about %.0f min)', ...
+                ceil(P.thermal.nFrames/2*0.041/60));   % (every 2nd frame; 41 ms per frame on a network drive, recording 3)
+            what(end+1) = 0;
+        end
+        pis = find(strcmp({P.rois.video}, 'pi'));
+        if ~isempty(P.pi)
+            for i = pis(:)'
+                R = P.breathingOf(i);
+                if ~isempty(R) && isequal(R.epochs, epochs); continue; end
+                items{end+1} = sprintf('Breathing: movement of the Pi ROI "%s" in one epoch per minute (%d epochs, about %.0f min)', ...
+                    P.rois(i).name, numel(epochs), ceil(numel(epochs)*3.3/60)); %#ok<AGROW> % (3.3 s per epoch of a 1080p video on a network drive)
+                what(end+1) = i; %#ok<AGROW>
+            end
+        end
+        if ~isempty(items)
+            [chosen, ok] = listdlg('ListString', items, 'SelectionMode', 'multiple', 'InitialValue', 1:numel(items), ...
+                'Name', 'Summary figure', 'ListSize', [620 110], 'PromptString', {'Signals of the videos to measure for the summary', ...
+                '(once: kept with the file when it is saved). None selected: the summary without them.'});
+            if ~ok; return; end
+            w = VS3_logo('waitbar', 0, 'Summary figure', 'Name', 'Summary figure', ...
+                'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+            setappdata(w, 'canceling', 0);
+            for c = chosen(:)'
+                if what(c) == 0
+                    try
+                        P.warmSpot = VS3_videoMotion('warmSpot', P.thermal, 2, @(f, txt) videoProgress(w, f, txt));
+                    catch err
+                        if ~strcmp(err.identifier, 'VS3_videoMotion:cancelled'); errordlg(err.message, 'Summary figure'); end
+                    end
+                else
+                    name = P.rois(what(c)).name;
+                    P.roiBreathing(what(c), epochs, @(k, n) videoProgress(w, k/n, ...
+                        sprintf('Breathing seen by the ROI "%s" (epoch %d of %d)', name, k, n)));
+                end
+                if ~isvalid(w) || isequal(getappdata(w, 'canceling'), 1); break; end
+            end
+            if isvalid(w); delete(w); end
+            h.issaved = 0;
+        end
+        if needT && isfield(P.warmSpot, 'value')
+            thermal = warmSpotTemperature(P.thermal, P.warmSpot, nEp);
+        end
+        for i = pis(:)'
+            R = P.breathingOf(i);
+            if ~isempty(R) && isequal(R.epochs, epochs); breathing = [breathing, R]; end %#ok<AGROW>
+        end
+    end
+
+    function A = warmSpotTemperature(T, W, nEp)
+        % the temperature of the animal (VS3_videoMotion 'warmSpot': mean of the 0.3 % warmest pixels
+        % of a frame) on the EEG time, per frame and per epoch, as a Thermal analysis for VS3_summary;
+        % the frames of a shutter cycle of the camera are left out
+        e = T.eegTimes();
+        t = e(W.frame);
+        v = W.value;
+        ok = isfinite(t) & isfinite(v) & T.valid(W.frame) & t >= 0 & t < 4*nEp;
+        t = t(ok); v = v(ok);
+        A = struct('valueEpoch', accumarray(floor(t(:)/4) + 1, v(:), [nEp 1], @median, NaN)', ...
+            't2Hz', t(:)', 'value2Hz', v(:)', 'unit', T.unit, 'roiMethod', 'warmest 0.3 % of each frame');
+    end
+
+    function sensor = summarySensor(nEp)
+        % breathing and heart rate of the Pi sensor in every epoch, for the summary (VS3_sensorTool
+        % 'timeline', as the trends of the sensor comparison, whose result is taken when up to date)
+        sensor = [];
+        if isempty(h.sensorData); return; end
+        sensorCaptureConfig()
+        T = [];
+        V = h.sensorView;
+        if ~isempty(V) && isvalid(V) && ~isempty(V.timeline) && ~V.overviewDirty && numel(V.timeline.epochs) == nEp
+            T = V.timeline;
+        end
+        if isempty(T)
+            w = VS3_logo('waitbar', 0, 'Breathing and heart rate of the sensor...', 'Name', 'Summary figure', ...
+                'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+            setappdata(w, 'canceling', 0);
+            T = VS3_sensorTool('timeline', h.sensorData, h.sensor.offset, h.sensor.bands, 1:nEp, [], {}, ...
+                @(k, n) rem(k, 100) ~= 1 || videoProgress(w, k/n, sprintf('Breathing and heart rate of the sensor (epoch %d of %d)', k, n)));
+            if isvalid(w); delete(w); end
+        end
+        sensor = struct('epochs', T.epochs, 'breathing', T.sensorFrequency(:, 1), 'heart', T.sensorFrequency(:, 2), ...
+            'harmonic', T.sensorHarmonic, 'bands', h.sensor.bands); % (cancelled: the epochs done)
     end
 
     function goToEpoch(ep)

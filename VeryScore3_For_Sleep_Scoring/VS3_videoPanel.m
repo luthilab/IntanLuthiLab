@@ -17,6 +17,8 @@ classdef VS3_videoPanel < handle
     % Pi ROIs give their movement (dx, dy, tracked from the first frame of the epoch, pixels) and
     % brightness (mean gray level), the thermal ROIs their mean (degC or counts). The traces of the
     % epoch are drawn under the videos, with the amplitude spectrum of the one clicked.
+    % roiBreathing measures the breathing rate seen by a Pi ROI in chosen epochs (Tools > Summary
+    % figure); the results are kept in breathing and saved with the settings.
     %
     % Alejandro Osorio-Forero with Claude, 2026.
 
@@ -30,6 +32,8 @@ classdef VS3_videoPanel < handle
         blind = false           % blind scoring (Import randomly): no file names
         keyFunction = []        % key presses in the column go to the main window (scoring keys)
         warmSpot = []           % the animal in the thermal video (VS3_videoMotion 'warmSpot'), kept for this video
+        breathing = struct('roi', {}, 'rect', {}, 'offset', {}, 'timing', {}, 'epochs', {}, 'frequency', {}, 'amplitude', {})
+                                % breathing seen by Pi ROIs (roiBreathing), one per ROI measured to the end
     end
 
     properties (SetAccess = private)
@@ -489,6 +493,69 @@ classdef VS3_videoPanel < handle
             self.showAt(t0)
         end
 
+        function R = roiBreathing(self, which, epochs, progress)
+            % roiBreathing  Breathing rate seen by the Pi ROI which (index in rois) in the given epochs:
+            % the strongest peak of its movement between 0.5 and 5 Hz (as the respiration band of the
+            % sensor), in dx or dy, whichever is larger. NaN in the epochs in which the ROI moved by more
+            % than 1 pixel (the animal moving, not breathing; breathing in the nest is about 0.05 pixel)
+            % or was tracked in less than 80 % of the frames. progress(k, n) returns false to stop
+            % (R.cancelled). A result measured to the end is kept in breathing (one per ROI).
+            if nargin < 4; progress = @(~, ~) true; end
+            roi = self.rois(which);
+            V = self.pi;
+            if ~strcmp(roi.video, 'pi') || isempty(V); error('VS3_videoPanel:roi', 'Breathing is measured on a Pi ROI.'); end
+            epochs = epochs(:);
+            n = numel(epochs);
+            R = struct('roi', roi.name, 'rect', roi.rect, 'offset', V.offset, 'timing', ~isempty(V.timeMap), ...
+                'epochs', epochs, 'frequency', nan(n, 1), 'amplitude', nan(n, 1));
+            cancelled = false;
+            e = V.eegTimes();
+            for i = 1:n
+                if ~progress(i, n); cancelled = true; break; end
+                t0 = self.plot.second(1, epochs(i));
+                k = V.framesBetween(t0, t0 + 4);
+                if numel(k) < 8; continue; end
+                D = trackPi(V, k, e(k), roi);
+                best = 0;
+                for d = D(1:2)
+                    v = d.v;
+                    if mean(isfinite(v)) < 0.8 || max(v) - min(v) > 1; best = NaN; break; end
+                    [f, a] = amplitudeSpectrum(d.t, v, t0);
+                    in = find(f >= 0.5 & f <= 5);
+                    in = in(in > 1 & in < numel(a));
+                    in = in(a(in) > a(in - 1) & a(in) >= a(in + 1)); % local maxima, not the edge of a peak outside
+                    [m, j] = max(a(in));
+                    if ~isempty(m) && m > best
+                        best = m;
+                        R.frequency(i) = f(in(j));
+                        R.amplitude(i) = m;
+                    end
+                end
+                if isnan(best); R.frequency(i) = NaN; R.amplitude(i) = NaN; end
+            end
+            self.shown = [NaN NaN]; % the reading moved the video: frames read again
+            self.showAt(self.plot.second(1, self.plot.position))
+            if ~cancelled
+                self.breathing(strcmp({self.breathing.roi}, roi.name)) = [];
+                self.breathing(end+1) = R;
+            end
+            R.cancelled = cancelled;
+        end
+
+        function R = breathingOf(self, which)
+            % breathingOf  The kept breathing of the Pi ROI which, if it was measured with this ROI and
+            % this timing of the Pi video; [] otherwise
+            R = [];
+            roi = self.rois(which);
+            V = self.pi;
+            if isempty(V); return; end
+            for B = self.breathing(:)'
+                if strcmp(B.roi, roi.name) && isequal(B.rect, roi.rect) && B.offset == V.offset && B.timing == ~isempty(V.timeMap)
+                    R = B;
+                end
+            end
+        end
+
         function drawRois(self)
             % the rectangles on the videos, the ROI traces of the epoch and the spectrum of one
             delete(self.boxes(isgraphics(self.boxes)))
@@ -601,7 +668,7 @@ classdef VS3_videoPanel < handle
         function S = settings(self)
             S = struct('piFile', '', 'piOffset', 0, 'piOffsetSource', '', 'thermalFile', '', 'thermalOffset', 0, ...
                 'thermalOffsetSource', '', 'mode', self.mode, 'overlay', self.overlay, 'alpha', self.alpha, ...
-                'rois', self.rois, 'roiOn', self.roiOn, 'timingFolder', '');
+                'rois', self.rois, 'roiOn', self.roiOn, 'timingFolder', '', 'breathing', self.breathing, 'warmSpot', self.warmSpot);
             for kind = {'pi', 'thermal'}
                 V = self.(kind{1});
                 if isempty(V); continue; end
@@ -622,6 +689,13 @@ classdef VS3_videoPanel < handle
                 self.rois = S.rois(keep);
             end
             if isfield(S, 'roiOn'); self.roiOn = logical(S.roiOn); end
+            if isfield(S, 'breathing') && isstruct(S.breathing) && all(isfield(S.breathing, fieldnames(self.breathing)))
+                self.breathing = S.breathing;
+            end
+            if isfield(S, 'warmSpot') && isstruct(S.warmSpot) && ~isempty(self.thermal) && isfield(S, 'thermalFile') && ...
+                    strcmp(S.thermalFile, self.thermal.file)
+                self.warmSpot = S.warmSpot;     % (of this thermal video: its frames, not its timing)
+            end
             self.roiEpoch = 0;
             self.refresh()
         end

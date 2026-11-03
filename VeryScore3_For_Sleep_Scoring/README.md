@@ -12,7 +12,7 @@ VeryScore3 is the continuation of **VeryScore2**, written by Romain Cardis and A
 - **Video**: the Raspberry Pi camera and the thermal camera in a column next to the traces, at the epoch you score, played over its 4 s, one above the other or the thermal image over the camera, with ROI traces
 - **Sensor data**: the respiration / heart sensor of the Pi compared with the EEG / EMG in each 4-s epoch
 - **Open Ephys**: recordings converted into VeryScore files from the File menu
-- **Summary figure**: hypnogram, EEG sigma activity, temperature and photometry of the whole recording
+- **Summary figure**: hypnogram, EEG sigma activity, temperature, breathing, heart rate and photometry of the whole recording
 - Everything in one program, `VS3_main`. See CHANGELOG.md for the full list.
 
 **New to VeryScore3?** Start with the **[tutorial](tutorial/README.md)**, step by step with figures, and the **[video tour](https://github.com/aosorioforero/VeryScore3/releases/download/tutorial-video/VS3_tour.mp4)**: from an Open Ephys recording to a scored file with the videos of the animal next to the traces. This README describes every menu.
@@ -148,7 +148,7 @@ The exported file opens in VeryScore3 like any other file. The scoring is not in
 
 **Take a snapshot:** It takes a snapshot of the current window, essentially reploting the current view in a new figure. You can then save the figure to keep track of your nicest spindles or show irregularities to your collegues.
 
-**Summary figure...:** the whole recording in one figure: the hypnogram, the sigma activity of an EEG channel, the temperature and the photometry dF/F when the file has them, and the time spent in each state. See **Summary figure** below.
+**Summary figure...:** the whole recording in one figure: the hypnogram, the sigma activity of an EEG channel, the temperature, breathing, heart rate and photometry dF/F when the file or its videos and sensor have them, and the time spent in each state. See **Summary figure** below.
 
 **Thermal video:** see **Thermal video** below.
 
@@ -315,8 +315,14 @@ How it is computed: the channel is multiplied by the cosine and sine of each car
 
 1. the hypnogram (wake, NREM, REM; artifact epochs with their state, microarousals as marks above wake)
 2. the sigma activity: power of the EEG in the sigma band (10-15 Hz) in every 4-s epoch, in % of its mean over the NREM epochs (of the median when nothing is scored as NREM); NREM in green, as a 3-epoch moving median that keeps the slow (about 1-min) fluctuations of sigma, over the values of each epoch in light green; artifact epochs left out
-3. the temperature of the thermal video, when the file has it (one value per epoch, per video frame in grey)
-4. the photometry dF/F, when the file has it (20 Hz in grey, 10-s mean in blue; the start left out of the baseline fit shaded)
+3. the temperature of the animal (one value per epoch, per video frame in grey): from Tools > Thermal video when the file has that analysis; otherwise, when a thermal video is open in the video column, from the video itself: the mean of the 0.3 % warmest pixels of every second frame (the warm spot that the movement tools also use), median per epoch, frames of a shutter cycle left out. A `.ravi` gives energy counts (the camera calibration to degrees is applied by Tools > Thermal video only)
+4. the breathing rate, per minute:
+   - of the Pi sensor, when it is imported (Tools > Sensor data): the strongest peak in its respiration band (0.5-5 Hz unless changed in the comparison) in every epoch in grey, its 1-min moving median in blue
+   - seen by each Pi ROI of the video column, as dots in the colour of the state of the epoch, in one epoch per minute (the middle one): the strongest peak of the movement of the ROI (dx or dy) between 0.5 and 5 Hz. An epoch in which the ROI moved by more than 1 pixel (the animal moving, not breathing) or was lost gives no dot. Put the ROI on the nest: the breathing moves it by about 0.05 pixel and shows only while the animal sleeps there
+5. the heart rate of the Pi sensor, per minute: the strongest peak in its heart band (5-15 Hz) in every epoch in grey, its 1-min moving median in purple without the epochs where the peak can be a harmonic of the breathing. A peak of the spectrum, not detected heartbeats
+6. the photometry dF/F, when the file has it (20 Hz in grey, 10-s mean in blue; the start left out of the baseline fit shaded)
+
+The signals of the videos are measured when the summary is made: what is not measured yet is listed first, with the time it takes (choose none for a summary without them). On recording 3 (5 h, videos on a network drive) the warm spot took 12 min and the breathing of the nest ROI (299 epochs of a 1080p video) 16 min. They are kept in the video settings and saved with the file, so they are measured only once (the breathing again when the ROI or the offset of the Pi video changes). The breathing and heart rate of the sensor take a few seconds.
 
 and, on the right:
 

@@ -44,11 +44,16 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
   for files converted from Open Ephys: their recorded names (`traceName`) won before, so the names typed
   were never shown. File > Edit file Infos > New: Cancel no longer gives an error.
 - Sensor comparison: cancelling the calculation of the trends showed an error instead of the partial trends.
+- Tools > Summary figure: the breathing (per min) of the Pi sensor and the one seen by Pi ROIs of the video
+  (one epoch per minute, coloured by state), the heart rate of the sensor, and, without a Thermal analysis,
+  the temperature of the warm spot of the thermal video. The video signals are measured once (asked
+  first, with the time it takes) and saved with the video settings (`Video.breathing`, `Video.warmSpot`).
+  `VS3_videoPanel.roiBreathing`; `VS3_videoMotion('warmSpot')` also gives the temperature of the spot.
 - `tutorial/README.md`: VeryScore3 step by step for students and new users, with figures of a real
   recording, and a video tour (`VS3_tour.mp4`, in the releases of the repository) filmed in the program.
 - Tests in `tests/` (synthetic data): `test_video` (Pi video, .h5, .ravi, column, playback, ROI, recorder
   timing maps), `test_videoMotion` (a walking animal in both videos, known delay and transform),
-  `test_openEphys`, `test_sensor` (by Wenjie). Checked on the overnight recording of 2026-10-28.
+  `test_openEphys`, `test_sensor` (by Wenjie), `test_summary` (sensor, video breathing and warm-spot panels). Checked on the overnight recording of 2026-10-28.
   `alignOverlay(xyPi, xyThermal)` aligns from a script.
 
 ## VeryScore3 3.0 (2026-10)

@@ -135,6 +135,43 @@ verifyEqual(t, D(1).v, x - x(1), 'AbsTol', 0.6);
 verifyEqual(t, D(2).v, zeros(120, 1), 'AbsTol', 0.6);
 end
 
+function testRoiBreathing(t)
+% a texture moving by 0.3 pixel at 2 Hz (breathing) is found at 2 Hz in every epoch; the result is
+% kept and saved with the settings
+file = fullfile(t.TestData.dir, 'breathing.avi');
+w = VideoWriter(file, 'Motion JPEG AVI');
+w.FrameRate = 30;
+w.Quality = 100;
+open(w)
+[X, Y] = meshgrid(1:160, 1:120);
+for k = 0:599
+    d = 0.3*sin(2*pi*2*k/30);
+    img = 128 + 40*sin(2*pi*(X - d)/23) + 40*sin(2*pi*Y/17) + 30*sin(2*pi*(X - d + Y)/31);
+    writeVideo(w, repmat(uint8(img), 1, 1, 3));
+end
+close(w)
+fig = openMain(t, 'pi', file);
+P = getappdata(findobj(fig, 'Tag', 'VS3video'), 'VS3_videoPanel');
+P.rois = struct('video', 'pi', 'rect', [50 40 40 30], 'name', 'nest');
+R = P.roiBreathing(1, (1:4)');
+verifyEqual(t, R.frequency, 2*ones(4, 1), 'AbsTol', 0.25);
+verifyFalse(t, R.cancelled);
+verifyEqual(t, P.breathingOf(1).frequency, R.frequency);
+S = P.settings();
+verifyEqual(t, S.breathing.frequency, R.frequency);
+P.rois.rect = [52 40 40 30];                    % another ROI: the kept result is not its own
+verifyEmpty(t, P.breathingOf(1));
+end
+
+function testRoiBreathingNotWhileMoving(t)
+% the square moving by 5 pixels is the animal moving, not breathing
+fig = openMain(t, 'pi', t.TestData.pi);
+P = getappdata(findobj(fig, 'Tag', 'VS3video'), 'VS3_videoPanel');
+P.rois = struct('video', 'pi', 'rect', [150 100 40 40], 'name', 'square');
+R = P.roiBreathing(1, (1:3)');
+verifyTrue(t, all(isnan(R.frequency)));
+end
+
 function testOverlayAlignmentTransform(t)
 fig = openMain(t, 'pi', t.TestData.pi, 'thermal', t.TestData.h5);
 P = getappdata(findobj(fig, 'Tag', 'VS3video'), 'VS3_videoPanel');

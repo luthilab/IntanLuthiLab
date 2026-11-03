@@ -1,5 +1,6 @@
 function [fig, S] = VS3_summary(varargin)
-%VS3_SUMMARY Overview of a recording: hypnogram, EEG sigma activity, temperature and photometry.
+%VS3_SUMMARY Overview of a recording: hypnogram, EEG sigma activity, temperature, breathing, heart
+%rate and photometry.
 %
 %   [fig, S] = VS3_summary('b', b, 'eeg', x, 'fs', 200, ...)      (Tools > Summary figure)
 %
@@ -10,7 +11,12 @@ function [fig, S] = VS3_summary(varargin)
 %      median (keeps the ~1-min infraslow fluctuations, damps single-epoch peaks) over the values of
 %      every epoch (light); artifact epochs (1/2/3) left out
 %   3. temperature of the thermal video, when given (one value per epoch, per frame in grey)
-%   4. photometry dF/F, when given (20 Hz in grey, 10-s mean in colour; the start left out of the
+%   4. breathing rate, when given: of the Pi sensor (strongest peak in its respiration band in every
+%      epoch, in grey; 1-min moving median in colour) and seen by Pi ROIs of the video (dots in the
+%      colour of the state of the epoch: only sleep in the nest shows the breathing)
+%   5. heart rate of the Pi sensor, when given (strongest peak in its heart band, in grey; 1-min
+%      moving median of the epochs where it is not a harmonic of the breathing, in colour)
+%   6. photometry dF/F, when given (20 Hz in grey, 10-s mean in colour; the start left out of the
 %      baseline fit shaded)
 % and, on the right: when the recording ran, a ring of the time spent in each state, the duration of the
 % bouts of each state (box plots over every bout) and the states hour by hour.
@@ -22,6 +28,11 @@ function [fig, S] = VS3_summary(varargin)
 %   'sigmaBand'   [10 15] Hz
 %   'thermal'     struct Thermal of the file (VS3_thermalTool), or []
 %   'photometry'  struct Photometry of the file (VS3_photometry), or []
+%   'sensor'      struct of the Pi sensor (from VS3_sensorTool 'timeline'): epochs, breathing and heart
+%                 (Hz, NaN = no value), harmonic (true: the heart peak can be a harmonic of the
+%                 breathing), bands ([2 x 2] Hz); or []
+%   'videoBreathing'  struct array, one per Pi ROI (VS3_videoPanel roiBreathing): roi (name), epochs,
+%                 frequency (Hz); or []
 %   'startTime'   time of the first sample (text or datetime), shown in the axis label ('' = unknown)
 %   'title'       title of the figure (file name; '' in blind mode)
 %   'navigate'    function handle fcn(epoch): a click in the figure calls it (VeryScore3 jumps there)
@@ -31,8 +42,9 @@ function [fig, S] = VS3_summary(varargin)
 %
 %   VS3_summary('save', fig, file)   saves a summary figure as file.fig and file.png. The .fig opens in
 %   MATLAB with its panels still zoomed together (openfig / double-click); clicking no longer navigates.
-% S holds what is drawn: time (h) and state of every epoch, sigma (% and raw power), the temperature
-% and photometry series, S.stats (minutes, %, bouts, bout durations per state) and S.perHour.
+% S holds what is drawn: time (h) and state of every epoch, sigma (% and raw power), the temperature,
+% breathing (per min), heart (per min) and photometry series, S.stats (minutes, %, bouts, bout
+% durations per state) and S.perHour.
 %
 % Alejandro Osorio-Forero with Claude, 2026, for VeryScore3.
 
@@ -42,7 +54,8 @@ if nargin > 0 && ischar(varargin{1}) && strcmpi(varargin{1}, 'save')
     return
 end
 o = struct('b', '', 'eeg', [], 'fs', 200, 'eegName', 'EEG', 'sigmaBand', [10 15], 'thermal', [], ...
-    'photometry', [], 'startTime', '', 'title', '', 'navigate', [], 'visible', 'on', 'file', 'summary.fig', 'saveAs', '');
+    'photometry', [], 'sensor', [], 'videoBreathing', [], 'startTime', '', 'title', '', 'navigate', [], 'visible', 'on', ...
+    'file', 'summary.fig', 'saveAs', '');
 for k = 1:2:numel(varargin)
     if ~isfield(o, varargin{k}); error('VS3_summary:option', 'Unknown option ''%s''.', varargin{k}); end
     o.(varargin{k}) = varargin{k + 1};
@@ -54,6 +67,7 @@ epLen = 4;                                            % s
 tEp = ((1:nEp) - 0.5) * epLen / 3600;                 % epoch centres, hours
 
 colW = [.8 .2 .2]; colN = [.4 .6 .2]; colR = [.8 .6 .2]; colPhot = [0 .45 .74]; colTherm = [.75 .15 .1];
+colBreath = [.1 .45 .6]; colHeart = [.55 .2 .5];
 
 % ---- states ----
 state = zeros(1, nEp);                                % 3 wake, 2 NREM, 1 REM, 0 unscored / other
@@ -73,15 +87,22 @@ end
 % ---- figure ----
 hasT = isstruct(o.thermal) && isfield(o.thermal, 'valueEpoch') && ~isempty(o.thermal.valueEpoch);
 hasP = isstruct(o.photometry) && isfield(o.photometry, 'dff') && isfield(o.photometry, 'time') && ~isempty(o.photometry.dff);
+hasS = isstruct(o.sensor) && isfield(o.sensor, 'epochs') && ~isempty(o.sensor.epochs);
+hasV = isstruct(o.videoBreathing) && ~isempty(o.videoBreathing) && isfield(o.videoBreathing, 'frequency');
 panels = {'hypno'};
 if ~isempty(S.sigma); panels{end + 1} = 'sigma'; end
 if hasT; panels{end + 1} = 'thermal'; end
+if hasS || hasV; panels{end + 1} = 'breathing'; end
+if hasS; panels{end + 1} = 'heart'; end
 if hasP; panels{end + 1} = 'photometry'; end
 np = numel(panels);
 ttl = 'Summary';
 if ~isempty(o.title); ttl = ['Summary - ', o.title]; end
+scr = get(groot, 'ScreenSize');
+hFig = max(820, 180 + 170 * np);
+if scr(4) > 400; hFig = min(hFig, scr(4) - 90); end   % (on the screen, also with many panels)
 fig = figure('Name', ttl, 'NumberTitle', 'off', 'Color', 'w', 'Visible', o.visible, ...
-    'Units', 'pixels', 'Position', [60 50 1720 max(820, 180 + 170 * np)]);
+    'Units', 'pixels', 'Position', [60 50 1720 hFig]);
 left = 0.055; width = 0.60; top = 0.94; gap = 0.035;
 h1 = 0.12;                                            % hypnogram height (normalized)
 hRest = min(0.30, (top - 0.08 - h1 - gap * (np - 1)) / max(np - 1, 1));
@@ -151,6 +172,58 @@ for i = 1:np
             text(a, 1, 1.02, sprintf('thermal video, %s', meth), 'Units', 'normalized', 'HorizontalAlignment', 'right', ...
                 'VerticalAlignment', 'bottom', 'FontSize', 8, 'Color', [.4 .4 .4], 'Interpreter', 'none');
             S.thermal = struct('time', tEp, 'value', ve, 'unit', unit);
+        case 'breathing'
+            S.breathing = struct('time', tEp, 'sensor', [], 'sensorMedian', [], 'video', struct('roi', {}, 'time', {}, 'value', {}));
+            shown = gobjects(0); names = {}; main = []; every = [];
+            if hasS
+                v = perEpoch(o.sensor.breathing, o.sensor.epochs, nEp) * 60;
+                vs = movmedian(v, 15, 'omitnan');            % 1 min
+                plot(a, tEp, v, '.', 'Color', [.82 .82 .82], 'MarkerSize', 3);
+                shown(end + 1) = plot(a, tEp, vs, 'Color', colBreath, 'LineWidth', 0.9);
+                names{end + 1} = sprintf('Pi sensor (%g-%g Hz, 1-min median)', o.sensor.bands(1, :));
+                S.breathing.sensor = v; S.breathing.sensorMedian = vs;
+                main = vs(isfinite(vs)); every = v(isfinite(v));
+            end
+            if hasV
+                marks = 'osd^v';
+                stateCols = {colR, colN, colW};              % state 1 REM, 2 NREM, 3 wake
+                for r = 1:numel(o.videoBreathing)
+                    B = o.videoBreathing(r);
+                    e = B.epochs(:)'; f = 60 * B.frequency(:)';
+                    ok = isfinite(f) & e >= 1 & e <= nEp;
+                    e = e(ok); f = f(ok);
+                    mk = marks(1 + mod(r - 1, numel(marks)));
+                    for lv = 0:3
+                        sel = state(e) == lv;
+                        if ~any(sel); continue; end
+                        c = [.6 .6 .6]; if lv > 0; c = stateCols{lv}; end
+                        plot(a, tEp(e(sel)), f(sel), mk, 'MarkerSize', 3.5, 'MarkerFaceColor', c, 'MarkerEdgeColor', 'none');
+                    end
+                    shown(end + 1) = plot(a, NaN, NaN, mk, 'MarkerSize', 4, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none'); %#ok<AGROW>
+                    names{end + 1} = sprintf('video ROI %s (colour of the state)', B.roi); %#ok<AGROW>
+                    S.breathing.video(end + 1) = struct('roi', B.roi, 'time', tEp(e), 'value', f);
+                    sleep = f(ismember(state(e), [1 2]));
+                    main = [main, sleep(:)']; every = [every, f]; %#ok<AGROW>
+                end
+            end
+            ylabel(a, sprintf('breathing\n(per min)'));
+            if isempty(main); main = every; end
+            if ~isempty(every); a.YLim = robustLim(main, every, [0.5 99.5]); end
+            legend(a, shown, names, 'Location', 'northoutside', 'Orientation', 'horizontal', 'Box', 'off', ...
+                'FontSize', 7, 'Interpreter', 'none', 'AutoUpdate', 'off');
+        case 'heart'
+            v = perEpoch(o.sensor.heart, o.sensor.epochs, nEp) * 60;
+            harm = perEpoch(double(o.sensor.harmonic), o.sensor.epochs, nEp) == 1;
+            vc = v; vc(harm) = NaN;                          % a harmonic of the breathing is no heart rate
+            vs = movmedian(vc, 15, 'omitnan');
+            plot(a, tEp, v, '.', 'Color', [.82 .82 .82], 'MarkerSize', 3);
+            plot(a, tEp, vs, 'Color', colHeart, 'LineWidth', 0.9);
+            ylabel(a, sprintf('heart rate\n(per min)'));
+            if any(isfinite(vs)); a.YLim = robustLim(vs(isfinite(vs)), v(isfinite(v)), [0.5 99.5]); end
+            text(a, 1, 1.02, sprintf('Pi sensor, strongest peak %g-%g Hz, 1-min median (not detected heartbeats)', o.sensor.bands(2, :)), ...
+                'Units', 'normalized', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'FontSize', 8, ...
+                'Color', [.4 .4 .4], 'Interpreter', 'none');
+            S.heart = struct('time', tEp, 'sensor', v, 'harmonic', harm, 'sensorMedian', vs);
         case 'photometry'
             P = o.photometry;
             tp = double(P.time(:)') / 3600;
@@ -424,6 +497,15 @@ s = '';
 if isfield(P, 'method')
     if strcmp(P.method, 'purple'); s = 'purple baseline'; else; s = 'exponential baseline'; end
 end
+end
+
+function v = perEpoch(x, epochs, nEp)
+% values x of the epochs given, on all the epochs of the recording (NaN elsewhere)
+v = nan(1, nEp);
+epochs = epochs(:)';
+ok = epochs >= 1 & epochs <= nEp;
+x = double(x(:)');
+v(epochs(ok)) = x(ok);
 end
 
 function goTo(src, fcn, nEp, epLen)

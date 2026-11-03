@@ -12,7 +12,8 @@ function varargout = VS3_videoMotion(action, varargin)
 %
 %   W = VS3_videoMotion('warmSpot', thermal, step, progress)
 %       warm spot (mean place of the 0.3 % warmest pixels) in every step-th frame of the thermal
-%       video: W.frame (frame numbers), W.x, W.y (pixels of the thermal video, NaN = none)
+%       video: W.frame (frame numbers), W.x, W.y (pixels of the thermal video, NaN = none), W.value
+%       (mean of these pixels: the temperature of the animal, in the unit of the video)
 %   [lag, R] = VS3_videoMotion('piLag', pi, thermal, W, progress)
 %       how much later the Pi video shows the movements (s; add it to the offset of the Pi video), NaN
 %       when fewer than 3 movement onsets give a clear answer that agrees; R.onsets (EEG times), R.lags,
@@ -42,7 +43,7 @@ end
 function W = warmSpot(T, step, progress)
 if nargin < 3; progress = @(~, ~) true; end
 idx = (1:step:T.nFrames)';
-W = struct('frame', idx, 'x', nan(size(idx)), 'y', nan(size(idx)));
+W = struct('frame', idx, 'x', nan(size(idx)), 'y', nan(size(idx)), 'value', nan(size(idx)));
 n = numel(idx);
 for i = 1:n
     if rem(i, 200) == 1 && ~progress(i/n, sprintf('Finding the animal in the thermal video (%d/%d frames)', i, n))
@@ -51,10 +52,12 @@ for i = 1:n
     f = double(T.frame(idx(i)));
     v = sort(f(isfinite(f)), 'descend');
     if numel(v) < 100; continue; end
-    [r, c] = find(f >= v(ceil(0.003*numel(v))));
+    warm = f >= v(ceil(0.003*numel(v)));
+    [r, c] = find(warm);
     if numel(r) > 5
         W.x(i) = mean(c);
         W.y(i) = mean(r);
+        W.value(i) = mean(f(warm));
     end
 end
 end
