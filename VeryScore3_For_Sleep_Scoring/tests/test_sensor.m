@@ -181,6 +181,8 @@ writeFunction(fullfile(dialogs,'uigetfile.m'),sprintf('function [f,p]=uigetfile(
 writeFunction(fullfile(dialogs,'listdlg.m'),sprintf('function [s,ok]=listdlg(varargin)\ns=1; ok=true;\nend'));
 addpath(dialogs);
 unshadow=onCleanup(@() rmpath(dialogs)); %#ok<NASGU>
+had=VS3_pref('is','fileHistory'); history=VS3_pref('get','fileHistory');
+restore=onCleanup(@() putBackHistory(had,history)); %#ok<NASGU>
 VS3_main(recording);
 main=findall(groot,'Type','figure','Tag','VS3Main');
 assertEqual(t,numel(main),1);
@@ -197,6 +199,11 @@ menu.Callback(menu,[]); % the same CSV again: its H5 is used, not made again
 verifyEqual(t,getfield(dir(target),'datenum'),made); %#ok<GFLD>
 verifyFalse(t,isfile(fullfile(eeg,'importcsv_sensor_2.h5')));
 verifyEqual(t,numel(findall(groot,'Type','figure','Name','Sensor / EEG-EMG comparison')),1);
+end
+
+function putBackHistory(had,history)
+% the import remembers the folder of the CSV (VS3_fileHistory): the history of the user is put back
+if had; VS3_pref('set','fileHistory',history); else; VS3_pref('remove','fileHistory'); end
 end
 
 function writeFunction(path,text)

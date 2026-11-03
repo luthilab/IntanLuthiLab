@@ -258,11 +258,11 @@ The sensor is placed on the EEG by the clock times of the two recordings. **Band
 
 **Tools > Summary figure...** asks for an EEG channel and draws the whole recording in one figure: the hypnogram, the sigma activity of the EEG (10–15 Hz, spindles) in NREM sleep, the temperature, breathing and heart rate when the videos and the sensor are open, photometry when the file has it, the time spent in each state, the duration of the bouts, and the states hour by hour.
 
-With a thermal video open, the temperature is the warmest spot of each frame. With an ROI on the nest in the Pi video, the breathing is measured in one epoch per minute: dots in the colour of the state, so you see the breathing of the sleeping mouse. With the sensor imported, its breathing and heart rate are shown too. The first time, VeryScore3 asks before measuring the videos (here 12 min for the temperature and 16 min for the breathing); **File > Save** keeps the results.
+With a thermal video open, the temperature is the warmest spot of each frame. With an ROI on the nest in the Pi video, the breathing is measured in one epoch per minute: dots in the colour of the state, so you see the breathing of the sleeping mouse. With the sensor imported, its breathing and heart rate are shown too, one value per 4-s epoch. The first time, VeryScore3 asks before measuring the videos (here 12 to 19 min for the temperature and 16 to 28 min for the breathing, depending on the network drive); **File > Save** keeps the results.
 
 ![Summary figure with the videos and the sensor](images/23_summary_signals.png)
 
-Here the video breathing is about 180 per minute in NREM sleep (middle half 165–195). The sensor's breathing peak often sits lower, and its heart-band peak (300–850 per minute) is a peak of the spectrum, not counted heartbeats.
+Here the video breathing is about 180 per minute in NREM sleep (middle half 165–195). The sensor's breathing jumps by about 30 per minute from one epoch to the next. In NREM it agrees with the video after 3 h of the recording, but between 1 and 2.5 h most epochs sit at 60–120. Its heart-band peak can be a harmonic of the breathing in half of the epochs (grey) and otherwise spreads over 360–690 per minute in NREM: a peak of the spectrum, not counted heartbeats.
 
 ![Summary figure](images/22_summary.png)
 

@@ -12,10 +12,10 @@ function [fig, S] = VS3_summary(varargin)
 %      every epoch (light); artifact epochs (1/2/3) left out
 %   3. temperature of the thermal video, when given (one value per epoch, per frame in grey)
 %   4. breathing rate, when given: of the Pi sensor (strongest peak in its respiration band in every
-%      epoch, in grey; 1-min moving median in colour) and seen by Pi ROIs of the video (dots in the
-%      colour of the state of the epoch: only sleep in the nest shows the breathing)
-%   5. heart rate of the Pi sensor, when given (strongest peak in its heart band, in grey; 1-min
-%      moving median of the epochs where it is not a harmonic of the breathing, in colour)
+%      4-s epoch, in steps of 15 /min) and seen by Pi ROIs of the video (dots in the colour of the
+%      state of the epoch: only sleep in the nest shows the breathing)
+%   5. heart rate of the Pi sensor, when given (strongest peak in its heart band in every 4-s epoch;
+%      in grey the epochs where it can be a harmonic of the breathing)
 %   6. photometry dF/F, when given (20 Hz in grey, 10-s mean in colour; the start left out of the
 %      baseline fit shaded)
 % and, on the right: when the recording ran, a ring of the time spent in each state, the duration of the
@@ -173,16 +173,14 @@ for i = 1:np
                 'VerticalAlignment', 'bottom', 'FontSize', 8, 'Color', [.4 .4 .4], 'Interpreter', 'none');
             S.thermal = struct('time', tEp, 'value', ve, 'unit', unit);
         case 'breathing'
-            S.breathing = struct('time', tEp, 'sensor', [], 'sensorMedian', [], 'video', struct('roi', {}, 'time', {}, 'value', {}));
+            S.breathing = struct('time', tEp, 'sensor', [], 'video', struct('roi', {}, 'time', {}, 'value', {}));
             shown = gobjects(0); names = {}; main = []; every = [];
             if hasS
                 v = perEpoch(o.sensor.breathing, o.sensor.epochs, nEp) * 60;
-                vs = movmedian(v, 15, 'omitnan');            % 1 min
-                plot(a, tEp, v, '.', 'Color', [.82 .82 .82], 'MarkerSize', 3);
-                shown(end + 1) = plot(a, tEp, vs, 'Color', colBreath, 'LineWidth', 0.9);
-                names{end + 1} = sprintf('Pi sensor (%g-%g Hz, 1-min median)', o.sensor.bands(1, :));
-                S.breathing.sensor = v; S.breathing.sensorMedian = vs;
-                main = vs(isfinite(vs)); every = v(isfinite(v));
+                shown(end + 1) = plot(a, tEp, v, '.-', 'Color', colBreath, 'LineWidth', 0.5, 'MarkerSize', 4); % (dots: an epoch between gaps)
+                names{end + 1} = sprintf('Pi sensor (%g-%g Hz, every 4-s epoch)', o.sensor.bands(1, :));
+                S.breathing.sensor = v;
+                main = v(isfinite(v)); every = main;
             end
             if hasV
                 marks = 'osd^v';
@@ -197,7 +195,7 @@ for i = 1:np
                         sel = state(e) == lv;
                         if ~any(sel); continue; end
                         c = [.6 .6 .6]; if lv > 0; c = stateCols{lv}; end
-                        plot(a, tEp(e(sel)), f(sel), mk, 'MarkerSize', 3.5, 'MarkerFaceColor', c, 'MarkerEdgeColor', 'none');
+                        plot(a, tEp(e(sel)), f(sel), mk, 'MarkerSize', 4.5, 'MarkerFaceColor', c, 'MarkerEdgeColor', 'w', 'LineWidth', 0.3);
                     end
                     shown(end + 1) = plot(a, NaN, NaN, mk, 'MarkerSize', 4, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none'); %#ok<AGROW>
                     names{end + 1} = sprintf('video ROI %s (colour of the state)', B.roi); %#ok<AGROW>
@@ -215,15 +213,16 @@ for i = 1:np
             v = perEpoch(o.sensor.heart, o.sensor.epochs, nEp) * 60;
             harm = perEpoch(double(o.sensor.harmonic), o.sensor.epochs, nEp) == 1;
             vc = v; vc(harm) = NaN;                          % a harmonic of the breathing is no heart rate
-            vs = movmedian(vc, 15, 'omitnan');
-            plot(a, tEp, v, '.', 'Color', [.82 .82 .82], 'MarkerSize', 3);
-            plot(a, tEp, vs, 'Color', colHeart, 'LineWidth', 0.9);
+            vh = v; vh(~harm) = NaN;
+            plot(a, tEp, vh, '.', 'Color', [.75 .75 .75], 'MarkerSize', 4);
+            plot(a, tEp, vc, '.-', 'Color', colHeart, 'LineWidth', 0.5, 'MarkerSize', 4);
             ylabel(a, sprintf('heart rate\n(per min)'));
-            if any(isfinite(vs)); a.YLim = robustLim(vs(isfinite(vs)), v(isfinite(v)), [0.5 99.5]); end
-            text(a, 1, 1.02, sprintf('Pi sensor, strongest peak %g-%g Hz, 1-min median (not detected heartbeats)', o.sensor.bands(2, :)), ...
+            if any(isfinite(v)); a.YLim = robustLim(vc(isfinite(vc)), v(isfinite(v)), [0.5 99.5]); end
+            text(a, 1, 1.02, sprintf(['Pi sensor, strongest peak %g-%g Hz in every 4-s epoch (not detected heartbeats); ', ...
+                'grey: can be a harmonic of the breathing'], o.sensor.bands(2, :)), ...
                 'Units', 'normalized', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'FontSize', 8, ...
                 'Color', [.4 .4 .4], 'Interpreter', 'none');
-            S.heart = struct('time', tEp, 'sensor', v, 'harmonic', harm, 'sensorMedian', vs);
+            S.heart = struct('time', tEp, 'sensor', v, 'harmonic', harm);
         case 'photometry'
             P = o.photometry;
             tp = double(P.time(:)') / 3600;

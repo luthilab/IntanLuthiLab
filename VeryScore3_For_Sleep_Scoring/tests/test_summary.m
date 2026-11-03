@@ -33,8 +33,13 @@ ax = findall(fig, 'Type', 'axes', 'Tag', 'VS3summary');
 labels = arrayfun(@(a) strjoin(cellstr(a.YLabel.String), ' '), ax, 'UniformOutput', false);
 verifyEqual(t, numel(ax), 3);                              % hypnogram, breathing, heart rate
 verifyTrue(t, any(contains(labels, 'breathing')) && any(contains(labels, 'heart rate')));
-verifyEqual(t, S.breathing.sensorMedian, 120*ones(1, nEp), 'AbsTol', 1e-9);
-verifyEqual(t, S.heart.sensorMedian, 480*ones(1, nEp), 'AbsTol', 1e-9); % the harmonic epochs left out
+breath = 120*ones(1, nEp); breath(100:110) = NaN;                % every 4-s epoch, no median
+verifyEqual(t, S.breathing.sensor, breath, 'AbsTol', 1e-9);
+heart = 480*ones(1, nEp); heart(120:126) = NaN;                  % the harmonic epochs left out of the line
+hr = ax(contains(labels, 'heart rate'));
+verifyEqual(t, findobj(hr, 'Type', 'line', 'Color', [.55 .2 .5]).YData, heart, 'AbsTol', 1e-9);
+verifyEqual(t, S.heart.sensor(120:126), 240*ones(1, 7), 'AbsTol', 1e-9); % shown in grey
+verifyEqual(t, find(S.heart.harmonic), 120:126);
 verifyEqual(t, S.breathing.video.value, 150*ones(1, numel(23:15:nEp)));
 verifyEqual(t, S.breathing.video.time, ((23:15:nEp) - 0.5)*4/3600, 'AbsTol', 1e-12);
 end

@@ -44,8 +44,9 @@ The separate program is not part of VeryScore3; its video, timing and sensor fun
   for files converted from Open Ephys: their recorded names (`traceName`) won before, so the names typed
   were never shown. File > Edit file Infos > New: Cancel no longer gives an error.
 - Sensor comparison: cancelling the calculation of the trends showed an error instead of the partial trends.
-- Tools > Summary figure: the breathing (per min) of the Pi sensor and the one seen by Pi ROIs of the video
-  (one epoch per minute, coloured by state), the heart rate of the sensor, and, without a Thermal analysis,
+- Tools > Summary figure: the breathing (per min) of the Pi sensor in every 4-s epoch and the one seen by Pi
+  ROIs of the video (one epoch per minute, coloured by state), the heart rate of the sensor in every 4-s epoch
+  (grey where it can be a harmonic of the breathing), and, without a Thermal analysis,
   the temperature of the warm spot of the thermal video. The video signals are measured once (asked
   first, with the time it takes) and saved with the video settings (`Video.breathing`, `Video.warmSpot`).
   `VS3_videoPanel.roiBreathing`; `VS3_videoMotion('warmSpot')` also gives the temperature of the spot.
